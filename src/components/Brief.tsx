@@ -17,7 +17,7 @@ export function Brief() {
               ? "Writing"
               : state === "off"
                 ? "Unavailable"
-                : "Written by Claude from the data on this page"}
+                : "Generated in real time with the Anthropic and Nasdaq APIs"}
         </span>
       </div>
 

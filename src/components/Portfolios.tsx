@@ -24,7 +24,7 @@ function Summary({ portfolio }: { portfolio: Portfolio }) {
               ? "Writing"
               : state === "off"
                 ? "Unavailable"
-                : "Written by Claude from these holdings"}
+                : "Generated in real time with the Anthropic and Nasdaq APIs"}
         </span>
       </div>
 
