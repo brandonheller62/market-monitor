@@ -33,7 +33,23 @@ Without a key the page renders in full and the note panel says the brief is off.
 | **On the calendar** | Today's economic releases with actual vs. consensus vs. prior, colored by surprise. |
 | **Reporting today** | The largest companies reporting, before open or after close. |
 | **Nasdaq-100 movers** | Leaders and laggards from the index. |
+| **Portfolios** | Three tabs, one per book: Mr. Jaffee's Portfolio, the Class Portfolio and the Dartboard Portfolio. Each carries its holdings ranked by session move and its own written read: what the collection is actually a bet on, what is driving it today, where the risk clusters, and what to watch for those names. |
 | **The wire** | Deduplicated headlines from five feeds, newest first. |
+
+### On the portfolios
+
+Holdings are defined in `src/lib/portfolios.ts`. Every ticker was resolved
+against Nasdaq's symbol lookup rather than from memory, and all 45 return a
+live quote (note that "Everpure Inc" is the symbol `P`).
+
+The sheets carry no share counts, so the app cannot compute a portfolio return
+and does not pretend to. What it shows is an equal-weighted read of the session:
+the average holding move and the advance/decline count, labelled as such on the
+page and in the prompt.
+
+A tab's note is written the first time you open that tab, not on page load, so
+you only pay for the books you actually look at. Once opened it stays put for
+the rest of the visit.
 
 ## Where the data comes from
 

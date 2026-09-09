@@ -1,14 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { getSnapshot, snapshotToPrompt } from "@/lib/snapshot";
-import { easternDate } from "@/lib/calendar";
+import { nowInEastern, streamNote } from "@/lib/note";
 import { sessionPhase } from "@/lib/format";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const MODEL = "claude-opus-5";
-/** Rewrite the brief at most this often; page reloads inside the window replay it. */
-const BRIEF_TTL_MS = 10 * 60 * 1000;
 
 const SYSTEM = `You write the desk note for a US markets team.
 
@@ -48,148 +43,16 @@ morning's read turns out to be wrong.
 
 Keep the whole note under 350 words.`;
 
-/**
- * Belt and braces on the "never use an em dash" rule. A bolded label followed
- * by one becomes a colon; anywhere else it becomes a comma. Chunks are held
- * back by a few characters so a dash split across stream boundaries still
- * matches.
- */
-function makeDashStripper() {
-  let carry = "";
-  const rewrite = (t: string) =>
-    t.replace(/\*\*\s*\u2014\s*/g, "**: ").replace(/\s*\u2014\s*/g, ", ");
-
-  return {
-    push(chunk: string): string {
-      const text = carry + chunk;
-      // Any trailing run of stars, whitespace or dashes could still turn into a
-      // pattern once more text arrives, so hold it back rather than emit it.
-      const tail = text.match(/[*\s\u2014]+$/);
-      const held = tail?.[0] ?? "";
-      carry = held;
-      return rewrite(text.slice(0, text.length - held.length));
-    },
-    flush(): string {
-      const rest = rewrite(carry);
-      carry = "";
-      return rest;
-    },
-  };
-}
-
-type CacheEntry = { key: string; text: string };
-let cache: CacheEntry | null = null;
-
-function bucketKey(): string {
-  return `${easternDate()}-${Math.floor(Date.now() / BRIEF_TTL_MS)}`;
-}
-
-function replay(text: string): Response {
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode(text));
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8", "X-Brief-Cache": "hit" },
-  });
-}
-
 export async function GET() {
-  const key = bucketKey();
-  if (cache?.key === key) return replay(cache.text);
-
-  const hasCredentials = Boolean(
-    process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
-  );
-  if (!hasCredentials) {
-    return new Response(
-      "No ANTHROPIC_API_KEY is set, so the written brief is off. " +
-        "The market data on this page is live and unaffected. " +
-        "Add a key to .env.local and restart to turn the brief on.",
-      { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } },
-    );
-  }
-
   const snapshot = await getSnapshot();
-  const client = new Anthropic();
-
-  const now = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date());
-
   const phase = sessionPhase();
-  const encoder = new TextEncoder();
-  const stripper = makeDashStripper();
-  let full = "";
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      try {
-        const run = client.beta.messages.stream({
-          model: MODEL,
-          max_tokens: 4000,
-          system: SYSTEM,
-          thinking: { type: "adaptive" },
-          // Routes around a safety refusal instead of returning an empty brief.
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
-          messages: [
-            {
-              role: "user",
-              content:
-                `It is ${now} ET. ${phase.description}\n\n` +
-                `Write today's note from this snapshot.\n\n` +
-                snapshotToPrompt(snapshot),
-            },
-          ],
-        });
-
-        run.on("text", (delta) => {
-          const clean = stripper.push(delta);
-          if (clean) {
-            full += clean;
-            controller.enqueue(encoder.encode(clean));
-          }
-        });
-
-        const final = await run.finalMessage();
-        const tail = stripper.flush();
-        if (tail) {
-          full += tail;
-          controller.enqueue(encoder.encode(tail));
-        }
-        if (final.stop_reason === "refusal") {
-          controller.enqueue(
-            encoder.encode(
-              "\n\nThe model declined to complete this note. The market data above is unaffected.",
-            ),
-          );
-        } else if (full.trim()) {
-          cache = { key, text: full };
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "unknown error";
-        controller.enqueue(
-          encoder.encode(`\n\nThe brief stopped early: ${message}`),
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Brief-Cache": "miss",
-    },
+  return streamNote({
+    name: "brief",
+    system: SYSTEM,
+    user:
+      `It is ${nowInEastern()} ET. ${phase.description}\n\n` +
+      `Write today's note from this snapshot.\n\n` +
+      snapshotToPrompt(snapshot),
   });
 }

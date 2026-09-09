@@ -4,7 +4,9 @@ import { EarningsPanel, EconPanel } from "@/components/CalendarPanel";
 import { Headlines } from "@/components/Headlines";
 import { Movers } from "@/components/Movers";
 import { MiniTape, Tape } from "@/components/Tape";
+import { Portfolios } from "@/components/Portfolios";
 import { getSnapshot } from "@/lib/snapshot";
+import { getAllPortfolios } from "@/lib/portfolios";
 import { REVALIDATE } from "@/lib/http";
 import { easternNow, parseClock, sessionPhase } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
@@ -46,7 +48,10 @@ function tapeLine(s: Snapshot): string {
 }
 
 export default async function Page() {
-  const snapshot = await getSnapshot();
+  const [snapshot, portfolios] = await Promise.all([
+    getSnapshot(),
+    getAllPortfolios(),
+  ]);
   const phase = sessionPhase();
 
   const dateLine = new Intl.DateTimeFormat("en-US", {
@@ -96,6 +101,16 @@ export default async function Page() {
           <Tape groups={snapshot.groups} />
           <Curve curve={snapshot.curve} />
         </div>
+      </div>
+
+      <div className="section-rule mt-12 pt-10">
+        <div className="mb-6 flex items-baseline justify-between">
+          <span className="eyebrow">Portfolios</span>
+          <span className="data text-[0.625rem] text-[var(--muted)]">
+            Each read is written from its own holdings
+          </span>
+        </div>
+        <Portfolios portfolios={portfolios} />
       </div>
 
       <div className="section-rule mt-12 grid gap-4 pt-10 lg:grid-cols-2">

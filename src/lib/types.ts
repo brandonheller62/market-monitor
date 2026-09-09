@@ -63,3 +63,26 @@ export type Snapshot = {
   crypto: Quote[];
   degraded: string[];
 };
+
+export type PortfolioId = "jaffee" | "class" | "dartboard";
+
+export type Holding = {
+  symbol: string;
+  name: string;
+  price: number | null;
+  changePct: number | null;
+  asOf: string | null;
+};
+
+export type Portfolio = {
+  id: PortfolioId;
+  name: string;
+  blurb: string;
+  holdings: Holding[];
+  /** Equal-weighted, because the sheet carries no share counts. */
+  averageChangePct: number | null;
+  advancing: number;
+  priced: number;
+  best: Holding | null;
+  worst: Holding | null;
+};

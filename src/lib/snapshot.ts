@@ -1,7 +1,7 @@
 import { getBoard, getCrypto, getCurve, getFx, getMovers } from "./market";
 import { getEarnings, getEcon } from "./calendar";
 import { getHeadlines } from "./news";
-import type { Snapshot } from "./types";
+import type { Portfolio, Snapshot } from "./types";
 
 /**
  * One fan-out across every upstream. All of them are cached by the Next data
@@ -103,6 +103,84 @@ export function snapshotToPrompt(s: Snapshot): string {
 
   if (s.degraded.length) {
     lines.push(`## Unavailable this run: ${s.degraded.join(", ")}`);
+  }
+
+  return lines.join("\n");
+}
+
+/** Corporate suffixes that make a poor headline search term. */
+const SUFFIXES =
+  /\b(inc|corp|corporation|co|ltd|plc|holdings|group|technologies|systems|software|company|class\s+[a-c]|the)\b/gi;
+
+/** A short, distinctive term to search headlines with, e.g. "Old Dominion". */
+function matchTerm(name: string): string {
+  const cleaned = name
+    .replace(/\(.*?\)/g, " ")
+    .replace(SUFFIXES, " ")
+    .replace(/[&,.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const words = cleaned.split(" ").filter(Boolean);
+  return words.slice(0, words[0] && words[0].length <= 5 ? 2 : 1).join(" ");
+}
+
+/** Text rendering of one portfolio against the day's tape. What Claude reads. */
+export function portfolioToPrompt(p: Portfolio, s: Snapshot): string {
+  const pct = (n: number | null) =>
+    n == null ? "n/a" : `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
+  const lines: string[] = [`# ${p.name}`, `${p.holdings.length} positions.`, ""];
+
+  lines.push("## Holdings");
+  for (const h of p.holdings) {
+    lines.push(`- ${h.symbol} ${h.name}: ${h.price ?? "n/a"} ${pct(h.changePct)}`);
+  }
+
+  lines.push("", "## Equal-weighted session read");
+  lines.push(
+    `No share counts are available, so this is an equal-weighted read of the ` +
+      `session, not a portfolio return. Average holding move ${pct(p.averageChangePct)}, ` +
+      `${p.advancing} of ${p.priced} priced names advancing.`,
+  );
+  if (p.best) lines.push(`Best: ${p.best.symbol} ${pct(p.best.changePct)}`);
+  if (p.worst) lines.push(`Worst: ${p.worst.symbol} ${pct(p.worst.changePct)}`);
+
+  const symbols = new Set(p.holdings.map((h) => h.symbol));
+  const reporting = s.earnings.filter((e) => symbols.has(e.symbol));
+  if (reporting.length) {
+    lines.push("", "## Holdings reporting today");
+    for (const e of reporting) {
+      lines.push(`- ${e.symbol}, ${e.time}, EPS consensus ${e.epsForecast}`);
+    }
+  }
+
+  const terms = p.holdings.map((h) => ({ h, term: matchTerm(h.name) }));
+  const related = s.headlines.filter((headline) =>
+    terms.some(({ h, term }) => {
+      const title = headline.title.toLowerCase();
+      if (term.length >= 4 && title.includes(term.toLowerCase())) return true;
+      return h.symbol.length >= 2 && new RegExp(`\\b${h.symbol}\\b`).test(headline.title);
+    }),
+  );
+  if (related.length) {
+    lines.push("", "## Headlines naming a holding");
+    for (const h of related.slice(0, 8)) lines.push(`- [${h.source}] ${h.title}`);
+  }
+
+  lines.push("", "## The tape around it");
+  for (const g of s.groups) {
+    lines.push(
+      `${g.title}: ` + g.quotes.map((q) => `${q.label} ${pct(q.changePct)}`).join(", "),
+    );
+  }
+  const ten = s.curve.points.find((c) => c.label === "10Y")?.yield;
+  if (ten != null) lines.push(`10-year Treasury ${ten}% (curve dated ${s.curve.date}).`);
+
+  const pending = s.econ.filter((e) => !e.released);
+  if (pending.length) {
+    lines.push(
+      "Still to print today: " +
+        pending.map((e) => `${e.event} (${e.time} ET)`).join(", "),
+    );
   }
 
   return lines.join("\n");

@@ -5,6 +5,7 @@ import type { Curve, Mover, Quote, QuoteGroup } from "./types";
 type NasdaqQuote = {
   data: {
     symbol: string;
+    companyName?: string;
     primaryData?: {
       lastSalePrice?: string;
       netChange?: string;
@@ -51,18 +52,40 @@ const BOARD: { title: string; caption: string; entries: BoardEntry[] }[] = [
   },
 ];
 
-async function quote(entry: BoardEntry): Promise<Quote> {
-  const url = `https://api.nasdaq.com/api/quote/${entry.symbol}/info?assetclass=${entry.assetclass}`;
-  const json = await getJson<NasdaqQuote>(url);
+/** One Nasdaq quote. Shared by the board and the portfolio tabs. */
+export async function quoteSymbol(
+  symbol: string,
+  assetclass: "index" | "etf" | "stocks" = "stocks",
+): Promise<{
+  companyName: string | null;
+  price: number | null;
+  change: number | null;
+  changePct: number | null;
+  asOf: string | null;
+}> {
+  const json = await getJson<NasdaqQuote>(
+    `https://api.nasdaq.com/api/quote/${symbol}/info?assetclass=${assetclass}`,
+  );
   const p = json?.data?.primaryData;
   return {
-    label: entry.label,
-    symbol: entry.symbol,
-    note: entry.note,
+    companyName: json?.data?.companyName ? dedash(json.data.companyName) : null,
     price: num(p?.lastSalePrice),
     change: num(p?.netChange),
     changePct: num(p?.percentageChange),
     asOf: p?.lastTradeTimestamp ?? null,
+  };
+}
+
+async function quote(entry: BoardEntry): Promise<Quote> {
+  const q = await quoteSymbol(entry.symbol, entry.assetclass);
+  return {
+    label: entry.label,
+    symbol: entry.symbol,
+    note: entry.note,
+    price: q.price,
+    change: q.change,
+    changePct: q.changePct,
+    asOf: q.asOf,
   };
 }
 
