@@ -102,3 +102,13 @@ export type Portfolio = {
     worst: Holding | null;
   };
 };
+
+export type Benchmark = {
+  label: string;
+  symbol: string;
+  note: string;
+  price: number | null;
+  changePct: number | null;
+  sincePct: number | null;
+  baselineDate: string | null;
+};

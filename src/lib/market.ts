@@ -221,6 +221,7 @@ function isoFromUs(date: string): string | null {
 export async function getBaselineClose(
   symbol: string,
   since: string,
+  assetclass: "etf" | "stocks" = "stocks",
 ): Promise<{ date: string; close: number } | null> {
   const from = new Date(`${since}T00:00:00Z`);
   from.setUTCDate(from.getUTCDate() - 14);
@@ -228,7 +229,7 @@ export async function getBaselineClose(
 
   const json = await getJson<HistoricalResponse>(
     `https://api.nasdaq.com/api/quote/${symbol}/historical` +
-      `?assetclass=stocks&fromdate=${fromdate}&todate=${since}&limit=20`,
+      `?assetclass=${assetclass}&fromdate=${fromdate}&todate=${since}&limit=20`,
     6 * 60 * 60,
   );
 

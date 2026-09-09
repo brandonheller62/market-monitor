@@ -60,6 +60,13 @@ change. The date lives in `SINCE_DATE` in `src/lib/portfolios.ts`: change that
 one line to re-point the window, or set it to the first of the current month to
 make it roll.
 
+Each tab also carries an S&P 500 benchmark panel: the index's move in both
+windows, the book's own figures beside it, and the gap in points. Nasdaq's
+quote API does not carry the index itself, so the benchmark is SPY and the
+panel names the proxy. The book is equal-weighted and the index is
+cap-weighted, so the gap is a rough read rather than an attribution, and both
+the panel and the note say so.
+
 Because there are still no share counts, the dollar figure is explicitly a
 hypothetical: what $10,000 split equally across the priced holdings at that
 close would be worth now. The page says so under the number, and the prompt

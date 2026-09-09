@@ -6,16 +6,17 @@ import { Movers } from "@/components/Movers";
 import { MiniTape, Tape } from "@/components/Tape";
 import { Portfolios } from "@/components/Portfolios";
 import { getSnapshot } from "@/lib/snapshot";
-import { getAllPortfolios } from "@/lib/portfolios";
+import { getAllPortfolios, getBenchmark } from "@/lib/portfolios";
 import { REVALIDATE } from "@/lib/http";
 import { sessionPhase } from "@/lib/format";
 
 export const revalidate = 300;
 
 export default async function Page() {
-  const [snapshot, portfolios] = await Promise.all([
+  const [snapshot, portfolios, benchmark] = await Promise.all([
     getSnapshot(),
     getAllPortfolios(),
+    getBenchmark(),
   ]);
   const phase = sessionPhase();
 
@@ -63,7 +64,7 @@ export default async function Page() {
             Each read is written from its own holdings
           </span>
         </div>
-        <Portfolios portfolios={portfolios} />
+        <Portfolios portfolios={portfolios} benchmark={benchmark} />
       </div>
 
       <div className="section-rule mt-12 grid gap-4 pt-10 lg:grid-cols-2">
@@ -82,7 +83,9 @@ export default async function Page() {
                   >
                     <span className="text-[0.9375rem]">{f.pair}</span>
                     <span className="data text-[0.875rem]">
-                      {f.rate.toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                      {f.rate.toLocaleString("en-US", {
+                        maximumFractionDigits: 4,
+                      })}
                     </span>
                   </div>
                 ))}
@@ -100,16 +103,16 @@ export default async function Page() {
       <footer className="section-rule mt-12 pt-6">
         {snapshot.degraded.length > 0 && (
           <p className="data mb-3 text-[0.75rem] text-[var(--down)]">
-            Unavailable this run: {snapshot.degraded.join(", ")}. Everything else on
-            this page is live.
+            Unavailable this run: {snapshot.degraded.join(", ")}. Everything
+            else on this page is live.
           </p>
         )}
         <p className="data text-[0.6875rem] leading-relaxed text-[var(--muted)]">
-          Quotes, movers and calendars from Nasdaq&rsquo;s public API · par yields
-          from the US Treasury · FX from Frankfurter · crypto from CoinGecko ·
-          headlines from CNBC, MarketWatch, the FT and the Federal Reserve. Data
-          refreshes every {REVALIDATE / 60} minutes and is delayed at the
-          source. Not investment advice.
+          Quotes, movers and calendars from Nasdaq&rsquo;s public API · par
+          yields from the US Treasury · FX from Frankfurter · crypto from
+          CoinGecko · headlines from CNBC, MarketWatch, the FT and the Federal
+          Reserve. Data refreshes every {REVALIDATE / 60} minutes and is delayed
+          at the source. Not investment advice.
         </p>
       </footer>
     </main>

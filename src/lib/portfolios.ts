@@ -1,5 +1,5 @@
 import { getBaselineClose, quoteSymbol } from "./market";
-import type { Holding, Portfolio, PortfolioId } from "./types";
+import type { Benchmark, Holding, Portfolio, PortfolioId } from "./types";
 
 type Definition = {
   id: PortfolioId;
@@ -179,4 +179,28 @@ export async function getPortfolio(id: PortfolioId): Promise<Portfolio> {
 
 export async function getAllPortfolios(): Promise<Portfolio[]> {
   return Promise.all(PORTFOLIO_IDS.map(getPortfolio));
+}
+
+/**
+ * The yardstick every book is read against. Nasdaq's quote API does not carry
+ * the S&P 500 index itself, so this is SPY, and the panel names the proxy.
+ */
+export async function getBenchmark(): Promise<Benchmark> {
+  const [q, base] = await Promise.all([
+    quoteSymbol("SPY", "etf"),
+    getBaselineClose("SPY", SINCE_DATE, "etf"),
+  ]);
+
+  return {
+    label: "S&P 500",
+    symbol: "SPY",
+    note: "SPY, the index ETF",
+    price: q.price,
+    changePct: q.changePct,
+    sincePct:
+      q.price != null && base != null && base.close !== 0
+        ? ((q.price - base.close) / base.close) * 100
+        : null,
+    baselineDate: base?.date ?? null,
+  };
 }

@@ -1,5 +1,5 @@
 import { getSnapshot, portfolioToPrompt } from "@/lib/snapshot";
-import { getPortfolio, isPortfolioId } from "@/lib/portfolios";
+import { getBenchmark, getPortfolio, isPortfolioId } from "@/lib/portfolios";
 import { nowInEastern, streamNote } from "@/lib/note";
 import { sessionPhase } from "@/lib/format";
 
@@ -49,6 +49,11 @@ and say what connects them.
 or cost the most over that window, whether today confirms or contradicts the
 month, and any name whose two windows point opposite ways.
 
+**Against the S&P 500**: 1 to 2 bullets on how the book sits versus the
+benchmark in both windows, and which holdings account for the gap. The book's
+figures are equal-weighted and the benchmark is cap-weighted, so call the gap a
+rough read rather than an attribution.
+
 **Where the risk clusters**: 2 to 3 bullets on concentration, correlation
 between holdings, or an exposure the portfolio is missing.
 
@@ -67,7 +72,11 @@ export async function GET(
     return new Response("Unknown portfolio.", { status: 404 });
   }
 
-  const [portfolio, snapshot] = await Promise.all([getPortfolio(id), getSnapshot()]);
+  const [portfolio, snapshot, benchmark] = await Promise.all([
+    getPortfolio(id),
+    getSnapshot(),
+    getBenchmark(),
+  ]);
   const phase = sessionPhase();
 
   return streamNote({
@@ -76,6 +85,6 @@ export async function GET(
     user:
       `It is ${nowInEastern()} ET. ${phase.description}\n\n` +
       `Write the note for this portfolio.\n\n` +
-      portfolioToPrompt(portfolio, snapshot),
+      portfolioToPrompt(portfolio, snapshot, benchmark),
   });
 }

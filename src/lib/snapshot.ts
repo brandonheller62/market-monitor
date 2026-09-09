@@ -1,7 +1,7 @@
 import { getBoard, getCrypto, getCurve, getFx, getMovers } from "./market";
 import { getEarnings, getEcon } from "./calendar";
 import { getHeadlines } from "./news";
-import type { Portfolio, Snapshot } from "./types";
+import type { Benchmark, Portfolio, Snapshot } from "./types";
 
 /**
  * One fan-out across every upstream. All of them are cached by the Next data
@@ -125,7 +125,11 @@ function matchTerm(name: string): string {
 }
 
 /** Text rendering of one portfolio against the day's tape. What Claude reads. */
-export function portfolioToPrompt(p: Portfolio, s: Snapshot): string {
+export function portfolioToPrompt(
+  p: Portfolio,
+  s: Snapshot,
+  benchmark: Benchmark,
+): string {
   const pct = (n: number | null) =>
     n == null ? "n/a" : `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
   const lines: string[] = [`# ${p.name}`, `${p.holdings.length} positions.`, ""];
@@ -158,6 +162,15 @@ export function portfolioToPrompt(p: Portfolio, s: Snapshot): string {
   );
   if (since.best) lines.push(`Best since Sep 1: ${since.best.symbol} ${pct(since.best.sincePct)}`);
   if (since.worst) lines.push(`Worst since Sep 1: ${since.worst.symbol} ${pct(since.worst.sincePct)}`);
+
+  lines.push("", "## Benchmark");
+  lines.push(
+    `S&P 500 exposure (${benchmark.note}): today ${pct(benchmark.changePct)}, ` +
+      `since Sep 1 ${pct(benchmark.sincePct)}. The book's equal-weighted figures ` +
+      `are today ${pct(p.averageChangePct)} and since Sep 1 ${pct(since.changePct)}. ` +
+      `The book is cap-agnostic and the benchmark is cap-weighted, so treat the ` +
+      `gap as a rough read, not an attribution.`,
+  );
 
   const symbols = new Set(p.holdings.map((h) => h.symbol));
   const reporting = s.earnings.filter((e) => symbols.has(e.symbol));

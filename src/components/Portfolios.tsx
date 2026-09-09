@@ -5,7 +5,7 @@ import { Delta } from "./Delta";
 import { renderMarkdown } from "./Markdown";
 import { useStreamedText } from "./useStreamedText";
 import { fmtMoney, fmtPct, fmtPrice, fmtShortDate } from "@/lib/format";
-import type { Portfolio } from "@/lib/types";
+import type { Benchmark, Portfolio } from "@/lib/types";
 
 function Summary({ portfolio }: { portfolio: Portfolio }) {
   const { text, state } = useStreamedText(`/api/portfolio/${portfolio.id}`);
@@ -48,7 +48,86 @@ function Summary({ portfolio }: { portfolio: Portfolio }) {
   );
 }
 
-function Holdings({ portfolio }: { portfolio: Portfolio }) {
+/** Points of out- or under-performance, stated as a gap rather than a ratio. */
+function gap(portfolio: number | null, bench: number | null): string {
+  if (portfolio == null || bench == null) return "n/a";
+  const d = portfolio - bench;
+  return `${d > 0 ? "+" : ""}${d.toFixed(2)} pts`;
+}
+
+function BenchmarkPanel({
+  benchmark,
+  portfolio,
+}: {
+  benchmark: Benchmark;
+  portfolio: Portfolio;
+}) {
+  const rows: [string, number | null, number | null][] = [
+    ["Today", benchmark.changePct, portfolio.averageChangePct],
+    ["Since Sep 1", benchmark.sincePct, portfolio.since.changePct],
+  ];
+
+  return (
+    <section className="panel px-4 py-3">
+      <div className="flex items-baseline justify-between">
+        <h3 className="eyebrow">S&amp;P 500 benchmark</h3>
+        <span className="data text-[0.625rem] text-[var(--muted)]">
+          {benchmark.note}
+        </span>
+      </div>
+
+      <div className="data mt-3 flex items-baseline justify-between gap-3 border-b border-[var(--line-soft)] pb-1.5 text-[0.5625rem] uppercase tracking-[0.18em] text-[var(--muted)]">
+        <span>Window</span>
+        <span className="flex shrink-0 items-baseline gap-3 whitespace-nowrap">
+          <span className="w-16 text-right sm:w-20">S&amp;P 500</span>
+          <span className="w-16 text-right sm:w-20">This book</span>
+          <span className="w-16 text-right sm:w-20">Gap</span>
+        </span>
+      </div>
+
+      <div>
+        {rows.map(([label, bench, book]) => (
+          <div
+            key={label}
+            className="row-rule flex items-baseline justify-between gap-3 py-2.5"
+          >
+            <span className="min-w-0 truncate text-[0.875rem]">{label}</span>
+            <span className="flex shrink-0 items-baseline gap-3">
+              <span className="w-16 text-right sm:w-20">
+                <Delta pct={bench} />
+              </span>
+              <span className="w-16 text-right sm:w-20">
+                <Delta pct={book} />
+              </span>
+              <span
+                className={`data w-16 text-right text-[0.8125rem] sm:w-20 ${
+                  book != null && bench != null && book - bench >= 0
+                    ? "text-[var(--up)]"
+                    : "text-[var(--down)]"
+                }`}
+              >
+                {gap(book, bench)}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="data mt-2 text-[0.6875rem] leading-relaxed text-[var(--muted)]">
+        The book&rsquo;s figures are equal-weighted, the benchmark is
+        cap-weighted, so the gap is a rough read rather than an attribution.
+      </p>
+    </section>
+  );
+}
+
+function Holdings({
+  portfolio,
+  benchmark,
+}: {
+  portfolio: Portfolio;
+  benchmark: Benchmark;
+}) {
   const sorted = [...portfolio.holdings].sort(
     (a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity),
   );
@@ -146,6 +225,8 @@ function Holdings({ portfolio }: { portfolio: Portfolio }) {
         )}
       </section>
 
+      <BenchmarkPanel benchmark={benchmark} portfolio={portfolio} />
+
       <section className="panel px-4 py-3">
         <div className="flex items-baseline justify-between">
           <h3 className="eyebrow">Holdings</h3>
@@ -197,7 +278,13 @@ function Holdings({ portfolio }: { portfolio: Portfolio }) {
   );
 }
 
-export function Portfolios({ portfolios }: { portfolios: Portfolio[] }) {
+export function Portfolios({
+  portfolios,
+  benchmark,
+}: {
+  portfolios: Portfolio[];
+  benchmark: Benchmark;
+}) {
   const [activeId, setActiveId] = useState(portfolios[0]?.id);
   // A tab keeps its summary once opened, so switching back does not re-bill it.
   const [opened, setOpened] = useState<string[]>([portfolios[0]?.id]);
@@ -253,7 +340,7 @@ export function Portfolios({ portfolios }: { portfolios: Portfolio[] }) {
           className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]"
         >
           {opened.includes(p.id) && <Summary portfolio={p} />}
-          <Holdings portfolio={p} />
+          <Holdings portfolio={p} benchmark={benchmark} />
         </div>
       ))}
     </div>
