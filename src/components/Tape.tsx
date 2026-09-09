@@ -40,17 +40,3 @@ export function Tape({ groups }: { groups: QuoteGroup[] }) {
     </>
   );
 }
-
-export function MiniTape({ title, quotes }: { title: string; quotes: Quote[] }) {
-  if (quotes.length === 0) return null;
-  return (
-    <section className="panel px-4 py-3">
-      <h2 className="eyebrow">{title}</h2>
-      <div className="mt-1">
-        {quotes.map((q) => (
-          <Row key={q.symbol} q={q} />
-        ))}
-      </div>
-    </section>
-  );
-}

@@ -27,14 +27,9 @@ Without a key the page renders in full and the note panel says the brief is off.
 
 | Section | What it shows |
 | --- | --- |
-| **The note** | Claude reads the same snapshot you're looking at and writes a desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. It's framed for the current session phase (pre-open, open, after the close, weekend) and streams in as it's written. |
+| **The note** | Claude reads the full snapshot and writes a desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. It's framed for the current session phase (pre-open, open, after the close, weekend) and streams in as it's written. |
 | **Equities / Risk, rates & real assets** | Ten gauges with session change. |
 | **Treasury curve** | The par yield curve at seven maturities, plus the 2s10s spread. |
-| **On the calendar** | Today's economic releases with actual vs. consensus vs. prior, colored by surprise. |
-| **Reporting today** | The largest companies reporting, before open or after close. |
-| **Nasdaq-100 movers** | Leaders and laggards from the index. |
-| **Portfolios** | Three tabs, one per book: Mr. Jaffee's Portfolio, the Class Portfolio and the Dartboard Portfolio. Each carries its holdings with both windows (today and since September 1), a since-September-1 block, and its own written read: what the collection is actually a bet on, what is driving it today, how the month compares, where the risk clusters, and what to watch for those names. |
-| **The wire** | Deduplicated headlines from five feeds, newest first. |
 
 ### On the portfolios
 
@@ -92,6 +87,10 @@ Two things worth knowing about the tape:
   Claude is told the same thing, so it won't call SPY "the S&P 500 index".
 - **Prices are delayed at the source.** This is a morning read, not a trading
   screen.
+
+The economic and earnings calendars, the market movers, FX, crypto and the
+headline feeds are no longer shown as panels. They are still fetched, because
+the written notes read them for context, and the footer credits them.
 
 Any source can rate-limit or change shape. Each fetch fails to `null` rather
 than throwing, so one bad feed degrades one panel; the footer names anything

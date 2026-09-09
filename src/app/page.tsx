@@ -1,9 +1,6 @@
 import { Brief } from "@/components/Brief";
 import { Curve } from "@/components/Curve";
-import { EarningsPanel, EconPanel } from "@/components/CalendarPanel";
-import { Headlines } from "@/components/Headlines";
-import { Movers } from "@/components/Movers";
-import { MiniTape, Tape } from "@/components/Tape";
+import { Tape } from "@/components/Tape";
 import { Portfolios } from "@/components/Portfolios";
 import { getSnapshot } from "@/lib/snapshot";
 import { getAllPortfolios, getBenchmark } from "@/lib/portfolios";
@@ -67,52 +64,19 @@ export default async function Page() {
         <Portfolios portfolios={portfolios} benchmark={benchmark} />
       </div>
 
-      <div className="section-rule mt-12 grid gap-4 pt-10 lg:grid-cols-2">
-        <EconPanel econ={snapshot.econ} />
-        <div className="space-y-4">
-          <EarningsPanel earnings={snapshot.earnings} />
-          <MiniTape title="Crypto" quotes={snapshot.crypto} />
-          {snapshot.fx.length > 0 && (
-            <section className="panel px-4 py-3">
-              <h2 className="eyebrow">Dollar crosses</h2>
-              <div className="mt-1">
-                {snapshot.fx.map((f) => (
-                  <div
-                    key={f.pair}
-                    className="row-rule flex items-baseline justify-between py-2"
-                  >
-                    <span className="text-[0.9375rem]">{f.pair}</span>
-                    <span className="data text-[0.875rem]">
-                      {f.rate.toLocaleString("en-US", {
-                        maximumFractionDigits: 4,
-                      })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      </div>
-
-      <div className="section-rule mt-12 space-y-4 pt-10">
-        <Movers gainers={snapshot.gainers} losers={snapshot.losers} />
-        <Headlines headlines={snapshot.headlines} />
-      </div>
-
       <footer className="section-rule mt-12 pt-6">
         {snapshot.degraded.length > 0 && (
           <p className="data mb-3 text-[0.75rem] text-[var(--down)]">
             Unavailable this run: {snapshot.degraded.join(", ")}. Everything
-            else on this page is live.
+            else is live.
           </p>
         )}
         <p className="data text-[0.6875rem] leading-relaxed text-[var(--muted)]">
-          Quotes, movers and calendars from Nasdaq&rsquo;s public API · par
-          yields from the US Treasury · FX from Frankfurter · crypto from
-          CoinGecko · headlines from CNBC, MarketWatch, the FT and the Federal
-          Reserve. Data refreshes every {REVALIDATE / 60} minutes and is delayed
-          at the source. Not investment advice.
+          Quotes and price history from Nasdaq&rsquo;s API · par yields from the
+          US Treasury. The written notes also read Nasdaq&rsquo;s economic and
+          earnings calendars and headlines from CNBC, MarketWatch, the FT and
+          the Federal Reserve. Data refreshes every {REVALIDATE / 60} minutes
+          and is delayed at the source. Not investment advice.
         </p>
       </footer>
     </main>
