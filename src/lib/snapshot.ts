@@ -43,7 +43,7 @@ export async function getSnapshot(): Promise<Snapshot> {
   };
 }
 
-/** Compact text rendering of the snapshot — this is what Claude reads. */
+/** Compact text rendering of the snapshot. This is what Claude reads. */
 export function snapshotToPrompt(s: Snapshot): string {
   const pct = (n: number | null) => (n == null ? "n/a" : `${n > 0 ? "+" : ""}${n.toFixed(2)}%`);
   const lines: string[] = [];
@@ -83,7 +83,7 @@ export function snapshotToPrompt(s: Snapshot): string {
       const result = e.released
         ? `actual ${e.actual} vs consensus ${e.consensus || "n/a"} (prev ${e.previous || "n/a"})`
         : `not yet released, consensus ${e.consensus || "n/a"} (prev ${e.previous || "n/a"})`;
-      lines.push(`- ${e.time} ${e.country}: ${e.event} — ${result}`);
+      lines.push(`- ${e.time} ${e.country}: ${e.event}, ${result}`);
     }
   }
 

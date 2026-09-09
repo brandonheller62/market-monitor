@@ -55,9 +55,9 @@ export function EconPanel({ econ }: { econ: EconEvent[] }) {
                     {e.released ? e.actual : "pending"}
                   </span>
                   <span className="text-[var(--muted)]">
-                    {e.consensus || "—"} cons.
+                    {e.consensus || "n/a"} cons.
                   </span>
-                  <span className="text-[var(--muted)]">{e.previous || "—"} prior</span>
+                  <span className="text-[var(--muted)]">{e.previous || "n/a"} prior</span>
                 </div>
               </div>
             );

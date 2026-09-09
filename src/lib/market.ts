@@ -1,4 +1,5 @@
 import { getJson, getText, num } from "./http";
+import { dedash } from "./format";
 import type { Curve, Mover, Quote, QuoteGroup } from "./types";
 
 type NasdaqQuote = {
@@ -131,14 +132,14 @@ export async function getMovers(): Promise<{ gainers: Mover[]; losers: Mover[] }
   const movers: Mover[] = rows
     .map((r) => ({
       symbol: r.symbol,
-      name: r.name.replace(/\s+(Common Stock|Class [A-C]).*$/i, "").trim(),
+      name: dedash(r.name.replace(/\s+(Common Stock|Class [A-C]).*$/i, "").trim()),
       price: num(r.lastSalePrice),
       changePct: num(r.change),
     }))
     .filter((m): m is Mover => m.changePct != null);
 
   // The feed returns a subset of the index, so cap each side at half the rows
-  // rather than a fixed six — otherwise the same name lands in both columns.
+  // rather than a fixed six, otherwise the same name lands in both columns.
   const sorted = [...movers].sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0));
   const half = Math.min(6, Math.floor(sorted.length / 2));
   return { gainers: sorted.slice(0, half), losers: sorted.slice(-half).reverse() };

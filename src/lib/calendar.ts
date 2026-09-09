@@ -1,4 +1,5 @@
 import { getJson, num } from "./http";
+import { dedash } from "./format";
 import type { Earning, EconEvent } from "./types";
 
 /** The session the recap is written for is the US trading day, so dates are ET. */
@@ -36,9 +37,9 @@ export async function getEcon(date = easternDate()): Promise<EconEvent[]> {
 
   return rows
     .map((r) => ({
-      time: clean(r.gmt) || "—",
+      time: clean(r.gmt) || "TBD",
       country: r.country,
-      event: r.eventName,
+      event: dedash(r.eventName),
       actual: clean(r.actual),
       consensus: clean(r.consensus),
       previous: clean(r.previous),
@@ -79,9 +80,9 @@ export async function getEarnings(date = easternDate()): Promise<Earning[]> {
   return rows
     .map((r) => ({
       symbol: r.symbol,
-      name: r.name.trim(),
+      name: dedash(r.name.trim()),
       time: WHEN[r.time] ?? "Time TBD",
-      epsForecast: r.epsForecast || "—",
+      epsForecast: r.epsForecast || "n/a",
       marketCap: num(r.marketCap),
     }))
     .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0))

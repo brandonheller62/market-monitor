@@ -3,7 +3,6 @@ import { Curve } from "@/components/Curve";
 import { EarningsPanel, EconPanel } from "@/components/CalendarPanel";
 import { Headlines } from "@/components/Headlines";
 import { Movers } from "@/components/Movers";
-import { SessionClock } from "@/components/SessionClock";
 import { MiniTape, Tape } from "@/components/Tape";
 import { getSnapshot } from "@/lib/snapshot";
 import { REVALIDATE } from "@/lib/http";
@@ -12,7 +11,7 @@ import type { Snapshot } from "@/lib/types";
 
 export const revalidate = 300;
 
-/** One factual sentence under the masthead — no interpretation, that's the note's job. */
+/** One factual sentence under the masthead. No interpretation, that's the note's job. */
 function tapeLine(s: Snapshot): string {
   const equities = s.groups[0]?.quotes ?? [];
   const scored = equities.filter((q) => q.changePct != null);
@@ -91,9 +90,7 @@ export default async function Page() {
         </p>
       </header>
 
-      <SessionClock econ={snapshot.econ} />
-
-      <div className="section-rule mt-12 grid gap-10 pt-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="section-rule mt-10 grid gap-10 pt-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Brief />
         <div className="space-y-4">
           <Tape groups={snapshot.groups} />

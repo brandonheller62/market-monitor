@@ -1,5 +1,17 @@
+/**
+ * Text from upstream feeds carries em dashes; the site sets them as commas or
+ * colons instead. Applied to headline and company text on the way in, so
+ * nothing rendered on the page uses the character.
+ */
+export function dedash(text: string): string {
+  return text
+    .replace(/\s*\u2014\s*(?=[a-z])/g, ", ")
+    .replace(/\s*\u2014\s*/g, ": ")
+    .replace(/\s+([,.:;!?])/g, "$1");
+}
+
 export function fmtPrice(n: number | null): string {
-  if (n == null) return "—";
+  if (n == null) return "n/a";
   const digits = Math.abs(n) >= 1000 ? 0 : Math.abs(n) >= 10 ? 2 : 4;
   return n.toLocaleString("en-US", {
     minimumFractionDigits: digits,
@@ -8,12 +20,12 @@ export function fmtPrice(n: number | null): string {
 }
 
 export function fmtPct(n: number | null): string {
-  if (n == null) return "—";
+  if (n == null) return "n/a";
   return `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
 
 export function fmtCap(n: number | null): string {
-  if (n == null) return "—";
+  if (n == null) return "n/a";
   if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
   if (n >= 1e9) return `$${(n / 1e9).toFixed(0)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;

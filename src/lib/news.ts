@@ -1,4 +1,5 @@
 import { getText } from "./http";
+import { dedash } from "./format";
 import type { Headline } from "./types";
 
 const FEEDS: { source: string; url: string; take: number }[] = [
@@ -38,7 +39,7 @@ function parseFeed(xml: string, source: string, take: number): Headline[] {
       const date = tag(block, "pubDate") ?? tag(block, "dc:date");
       const published = date ? Date.parse(date) : NaN;
       return {
-        title,
+        title: dedash(title),
         link,
         source,
         published: Number.isFinite(published) ? published : null,

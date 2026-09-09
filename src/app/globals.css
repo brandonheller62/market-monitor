@@ -100,24 +100,6 @@ a {
   border-top: var(--hair) solid var(--line-soft);
 }
 
-/* ---- the session strip --------------------------------------------- */
-
-.strip-tick {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: var(--hair);
-  background: var(--line);
-}
-
-.now-marker::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--dawn);
-  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--dawn) 55%, transparent);
-}
-
 /* ---- brief prose ---------------------------------------------------- */
 
 .brief p {
@@ -158,10 +140,10 @@ a {
 .brief li::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 0.7em;
-  width: 0.5rem;
-  height: var(--hair);
+  left: 0.1rem;
+  top: 0.62em;
+  width: 0.3rem;
+  height: 0.3rem;
   background: var(--dawn);
 }
 

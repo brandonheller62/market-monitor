@@ -1,7 +1,7 @@
 # The Overnight
 
 A morning market recap: one page that says what moved overnight, what prints
-today, and what to watch — assembled at page load from public data, with a
+today, and what to watch, assembled at page load from public data, with a
 written note from Claude on top of it.
 
 ![The Overnight](docs/screenshot.png)
@@ -17,7 +17,7 @@ Every number and headline works with no configuration. The written note needs a
 Claude API key:
 
 ```bash
-cp .env.example .env.local   # then paste your key into ANTHROPIC_API_KEY
+cp.env.example.env.local   # then paste your key into ANTHROPIC_API_KEY
 npm run dev
 ```
 
@@ -27,8 +27,7 @@ Without a key the page renders in full and the note panel says the brief is off.
 
 | Section | What it shows |
 | --- | --- |
-| **Session strip** | The trading day 00:00–20:00 ET: which desks were open when, where today's scheduled releases land, and where "now" sits. Filled dots have printed. |
-| **The note** | Claude reads the same snapshot you're looking at and writes a pre-open desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. Streams in as it's written. |
+| **The note** | Claude reads the same snapshot you're looking at and writes a desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. It's framed for the current session phase (pre-open, open, after the close, weekend) and streams in as it's written. |
 | **Equities / Risk, rates & real assets** | Ten gauges with session change. |
 | **Treasury curve** | The par yield curve at seven maturities, plus the 2s10s spread. |
 | **On the calendar** | Today's economic releases with actual vs. consensus vs. prior, colored by surprise. |
@@ -72,7 +71,7 @@ src/lib/       http.ts      fetch wrapper: browser UA, timeout, Next data cache
                             rendering that Claude reads
 src/app/       page.tsx     server component: renders the snapshot
                api/brief/   streams the note from Claude
-src/components/             panels; SessionClock is the strip
+src/components/             the panels
 ```
 
 The page is an ISR route revalidating every 5 minutes (`REVALIDATE` in
@@ -80,7 +79,7 @@ The page is an ISR route revalidating every 5 minutes (`REVALIDATE` in
 and the brief route read identical numbers without paying for the fetches twice.
 
 The brief itself is cached in-process for 10 minutes and replayed to anyone who
-loads the page inside that window — otherwise every reload would bill a fresh
+loads the page inside that window, otherwise every reload would bill a fresh
 Opus call. It runs `claude-opus-5` with adaptive thinking, streams token by
 token, and declares server-side refusal fallbacks so a declined request routes
 to another model instead of leaving an empty panel.

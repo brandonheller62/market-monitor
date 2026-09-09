@@ -23,29 +23,59 @@ Rules:
   are higher and growth names are lagging" is fair; "rates rose because of the
   jobs print" needs evidence in the data.
 - The tape data comes from ETF proxies where noted. Do not call SPY "the S&P
-  500 index" — say the exposure, not the instrument, or name the proxy.
+  500 index". Say the exposure, not the instrument, or name the proxy.
 - If a data source is listed as unavailable, say so plainly rather than
   papering over the gap.
 - No hedging filler, no "as always, markets are complex", no investment advice.
 - The note is written at a specific moment in the session, stated below. Frame
   it for that moment rather than assuming the market is about to open.
+- Never use an em dash. Use a colon, a comma, or a second sentence instead.
 
 Format your answer as exactly these sections, in Markdown:
 
-**The setup** — one paragraph, 2-3 sentences. The single sentence a trader
+**The setup**: one paragraph, 2-3 sentences. The single sentence a trader
 would say walking onto the desk, plus the context that makes it true.
 
-**What moved** — 3 to 5 bullets. Each bullet: a bolded 2-5 word label, an em
-dash, then one or two sentences. Lead with the most consequential item.
+**What moved**: 3 to 5 bullets. Each bullet is a bolded 2-5 word label, then a
+colon, then one or two sentences. Lead with the most consequential item.
 
-**Watch from here** — 2 to 4 bullets, same shape, forward-looking only from
-the stated moment: releases still to come, earnings after the close, levels or
+**Watch from here**: 2 to 4 bullets, same shape, forward-looking only from the
+stated moment: releases still to come, earnings after the close, levels or
 spreads that would change the read.
 
-**The contrarian note** — one sentence naming the most plausible way this
+**The contrarian note**: one sentence naming the most plausible way this
 morning's read turns out to be wrong.
 
 Keep the whole note under 350 words.`;
+
+/**
+ * Belt and braces on the "never use an em dash" rule. A bolded label followed
+ * by one becomes a colon; anywhere else it becomes a comma. Chunks are held
+ * back by a few characters so a dash split across stream boundaries still
+ * matches.
+ */
+function makeDashStripper() {
+  let carry = "";
+  const rewrite = (t: string) =>
+    t.replace(/\*\*\s*\u2014\s*/g, "**: ").replace(/\s*\u2014\s*/g, ", ");
+
+  return {
+    push(chunk: string): string {
+      const text = carry + chunk;
+      // Any trailing run of stars, whitespace or dashes could still turn into a
+      // pattern once more text arrives, so hold it back rather than emit it.
+      const tail = text.match(/[*\s\u2014]+$/);
+      const held = tail?.[0] ?? "";
+      carry = held;
+      return rewrite(text.slice(0, text.length - held.length));
+    },
+    flush(): string {
+      const rest = rewrite(carry);
+      carry = "";
+      return rest;
+    },
+  };
+}
 
 type CacheEntry = { key: string; text: string };
 let cache: CacheEntry | null = null;
@@ -96,6 +126,7 @@ export async function GET() {
 
   const phase = sessionPhase();
   const encoder = new TextEncoder();
+  const stripper = makeDashStripper();
   let full = "";
 
   const stream = new ReadableStream<Uint8Array>({
@@ -121,11 +152,19 @@ export async function GET() {
         });
 
         run.on("text", (delta) => {
-          full += delta;
-          controller.enqueue(encoder.encode(delta));
+          const clean = stripper.push(delta);
+          if (clean) {
+            full += clean;
+            controller.enqueue(encoder.encode(clean));
+          }
         });
 
         const final = await run.finalMessage();
+        const tail = stripper.flush();
+        if (tail) {
+          full += tail;
+          controller.enqueue(encoder.encode(tail));
+        }
         if (final.stop_reason === "refusal") {
           controller.enqueue(
             encoder.encode(

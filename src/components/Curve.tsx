@@ -34,7 +34,7 @@ export function Curve({ curve }: { curve: CurveData }) {
         {curve.points.map((p) => (
           <div key={p.label} className="flex flex-1 flex-col items-center gap-1.5">
             <span className="data text-[0.6875rem]">
-              {p.yield != null ? p.yield.toFixed(2) : "—"}
+              {p.yield != null ? p.yield.toFixed(2) : "n/a"}
             </span>
             <div
               className="w-full rounded-[1px]"
@@ -52,7 +52,7 @@ export function Curve({ curve }: { curve: CurveData }) {
         <p className="data mt-3 border-t border-[var(--line-soft)] pt-2 text-[0.6875rem] text-[var(--muted)]">
           2s10s {curve.twosTens > 0 ? "+" : ""}
           {(curve.twosTens * 100).toFixed(0)} bp
-          {curve.twosTens < 0 ? " — inverted" : ""}
+          {curve.twosTens < 0 ? ", inverted" : ""}
         </p>
       )}
     </section>
