@@ -7,7 +7,7 @@ import { SessionClock } from "@/components/SessionClock";
 import { MiniTape, Tape } from "@/components/Tape";
 import { getSnapshot } from "@/lib/snapshot";
 import { REVALIDATE } from "@/lib/http";
-import { sessionPhase } from "@/lib/format";
+import { easternNow, parseClock, sessionPhase } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
 
 export const revalidate = 300;
@@ -18,7 +18,14 @@ function tapeLine(s: Snapshot): string {
   const scored = equities.filter((q) => q.changePct != null);
   const up = scored.filter((q) => (q.changePct ?? 0) > 0).length;
   const ten = s.curve.points.find((p) => p.label === "10Y")?.yield;
-  const pending = s.econ.filter((e) => !e.released).length;
+  // Counted off the clock, not the `released` flag: the calendar feed prefills
+  // figures for releases that have not happened yet, so "still to print" has to
+  // come from the scheduled time.
+  const nowMinutes = easternNow().minutes;
+  const pending = s.econ.filter((e) => {
+    const at = parseClock(e.time);
+    return at == null ? !e.released : at > nowMinutes;
+  }).length;
 
   const parts: string[] = [];
   if (scored.length) {
