@@ -198,3 +198,48 @@ export async function getCrypto(): Promise<Quote[]> {
       asOf: null,
     }));
 }
+
+type HistoricalResponse = {
+  data?: {
+    tradesTable?: { rows?: { date: string; close: string }[] | null } | null;
+  } | null;
+};
+
+/** "09/01/2026" -> "2026-09-01", so dates sort as strings. */
+function isoFromUs(date: string): string | null {
+  const m = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[1]}-${m[2]}` : null;
+}
+
+/**
+ * The last closing price strictly before `since`, which is the base a
+ * month-to-date move is measured from. Reaches back two weeks so a holiday or
+ * weekend on the boundary still resolves to a real session.
+ *
+ * Cached for six hours: a settled historical close does not change.
+ */
+export async function getBaselineClose(
+  symbol: string,
+  since: string,
+): Promise<{ date: string; close: number } | null> {
+  const from = new Date(`${since}T00:00:00Z`);
+  from.setUTCDate(from.getUTCDate() - 14);
+  const fromdate = from.toISOString().slice(0, 10);
+
+  const json = await getJson<HistoricalResponse>(
+    `https://api.nasdaq.com/api/quote/${symbol}/historical` +
+      `?assetclass=stocks&fromdate=${fromdate}&todate=${since}&limit=20`,
+    6 * 60 * 60,
+  );
+
+  const rows = json?.data?.tradesTable?.rows ?? [];
+  const priorSessions = rows
+    .map((r) => ({ date: isoFromUs(r.date), close: num(r.close) }))
+    .filter(
+      (r): r is { date: string; close: number } =>
+        r.date != null && r.close != null && r.date < since,
+    )
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  return priorSessions[0] ?? null;
+}

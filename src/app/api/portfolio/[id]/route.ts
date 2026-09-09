@@ -20,8 +20,13 @@ Rules:
   sit in. That is what makes the note specific to this portfolio. What you may
   not do is claim a fact about their results, guidance, or news flow that is not
   in the data.
-- There are no share counts, so you cannot compute a portfolio return. The
-  average holding move is equal-weighted and must be described that way.
+- There are no share counts, so you cannot compute a portfolio return. Both the
+  average holding move and the since-September-1 value are equal-weighted
+  illustrations and must be described that way. Never call the hypothetical
+  dollar figure the portfolio's value.
+- Two windows are given for each holding: today's session, and the move since
+  September 1. Say which one you mean every time, and when the two disagree,
+  that gap is usually the most interesting thing on the page.
 - When you link a holding's move to a macro driver, say how firm the link is.
   A tanker name up on a day crude is up is a plausible read, not a proven one.
 - Say what is concentrated. If several holdings are the same bet wearing
@@ -39,6 +44,10 @@ or themes running through the holdings, and the character that follows from it.
 **Driving it today**: 3 to 4 bullets. Each bullet is a bolded ticker or short
 label, then a colon, then one or two sentences. Lead with the largest movers
 and say what connects them.
+
+**Since September 1**: 2 to 3 bullets on the month so far: which holdings built
+or cost the most over that window, whether today confirms or contradicts the
+month, and any name whose two windows point opposite ways.
 
 **Where the risk clusters**: 2 to 3 bullets on concentration, correlation
 between holdings, or an exposure the portfolio is missing.

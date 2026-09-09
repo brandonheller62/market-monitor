@@ -72,6 +72,10 @@ export type Holding = {
   price: number | null;
   changePct: number | null;
   asOf: string | null;
+  /** Close on the last session before the since-date. */
+  baseline: number | null;
+  /** Move from that close to now, in percent. */
+  sincePct: number | null;
 };
 
 export type Portfolio = {
@@ -85,4 +89,16 @@ export type Portfolio = {
   priced: number;
   best: Holding | null;
   worst: Holding | null;
+  /** Month-to-date block, measured from the close before `since`. */
+  since: {
+    date: string;
+    baselineDate: string | null;
+    /** Hypothetical capital spread equally across the priced holdings. */
+    startValue: number;
+    currentValue: number | null;
+    changePct: number | null;
+    tracked: number;
+    best: Holding | null;
+    worst: Holding | null;
+  };
 };

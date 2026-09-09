@@ -130,9 +130,12 @@ export function portfolioToPrompt(p: Portfolio, s: Snapshot): string {
     n == null ? "n/a" : `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
   const lines: string[] = [`# ${p.name}`, `${p.holdings.length} positions.`, ""];
 
-  lines.push("## Holdings");
+  lines.push("## Holdings (price, today, since Sep 1)");
   for (const h of p.holdings) {
-    lines.push(`- ${h.symbol} ${h.name}: ${h.price ?? "n/a"} ${pct(h.changePct)}`);
+    lines.push(
+      `- ${h.symbol} ${h.name}: ${h.price ?? "n/a"}, today ${pct(h.changePct)}, ` +
+        `since Sep 1 ${pct(h.sincePct)}`,
+    );
   }
 
   lines.push("", "## Equal-weighted session read");
@@ -143,6 +146,18 @@ export function portfolioToPrompt(p: Portfolio, s: Snapshot): string {
   );
   if (p.best) lines.push(`Best: ${p.best.symbol} ${pct(p.best.changePct)}`);
   if (p.worst) lines.push(`Worst: ${p.worst.symbol} ${pct(p.worst.changePct)}`);
+
+  const since = p.since;
+  lines.push("", `## Since September 1 (from the ${since.baselineDate} close)`);
+  lines.push(
+    `A hypothetical $${Math.round(since.startValue).toLocaleString("en-US")} split ` +
+      `equally across the ${since.tracked} priced holdings at that close would now ` +
+      `be worth $${Math.round(since.currentValue ?? 0).toLocaleString("en-US")}, ` +
+      `${pct(since.changePct)}. There are no share counts, so this is an ` +
+      `equal-weighted illustration, not the book's real value.`,
+  );
+  if (since.best) lines.push(`Best since Sep 1: ${since.best.symbol} ${pct(since.best.sincePct)}`);
+  if (since.worst) lines.push(`Worst since Sep 1: ${since.worst.symbol} ${pct(since.worst.sincePct)}`);
 
   const symbols = new Set(p.holdings.map((h) => h.symbol));
   const reporting = s.earnings.filter((e) => symbols.has(e.symbol));

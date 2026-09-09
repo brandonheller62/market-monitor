@@ -118,3 +118,19 @@ export function sessionPhase(now = new Date()): SessionPhase {
       "as a wrap of the day just finished and a setup for tomorrow.",
   };
 }
+
+export function fmtMoney(n: number | null): string {
+  if (n == null) return "n/a";
+  return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+/** "2026-08-31" -> "Aug 31". */
+export function fmtShortDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00Z`);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}

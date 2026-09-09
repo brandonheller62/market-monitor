@@ -33,7 +33,7 @@ Without a key the page renders in full and the note panel says the brief is off.
 | **On the calendar** | Today's economic releases with actual vs. consensus vs. prior, colored by surprise. |
 | **Reporting today** | The largest companies reporting, before open or after close. |
 | **Nasdaq-100 movers** | Leaders and laggards from the index. |
-| **Portfolios** | Three tabs, one per book: Mr. Jaffee's Portfolio, the Class Portfolio and the Dartboard Portfolio. Each carries its holdings ranked by session move and its own written read: what the collection is actually a bet on, what is driving it today, where the risk clusters, and what to watch for those names. |
+| **Portfolios** | Three tabs, one per book: Mr. Jaffee's Portfolio, the Class Portfolio and the Dartboard Portfolio. Each carries its holdings with both windows (today and since September 1), a since-September-1 block, and its own written read: what the collection is actually a bet on, what is driving it today, how the month compares, where the risk clusters, and what to watch for those names. |
 | **The wire** | Deduplicated headlines from five feeds, newest first. |
 
 ### On the portfolios
@@ -50,6 +50,20 @@ page and in the prompt.
 A tab's note is written the first time you open that tab, not on page load, so
 you only pay for the books you actually look at. Once opened it stays put for
 the rest of the visit.
+
+### Since September 1
+
+Each holding also carries its move since the start of September, measured from
+the last close before the 1st (the standard month-to-date base), fetched from
+Nasdaq's daily history and cached for six hours since a settled close does not
+change. The date lives in `SINCE_DATE` in `src/lib/portfolios.ts`: change that
+one line to re-point the window, or set it to the first of the current month to
+make it roll.
+
+Because there are still no share counts, the dollar figure is explicitly a
+hypothetical: what $10,000 split equally across the priced holdings at that
+close would be worth now. The page says so under the number, and the prompt
+forbids the note from calling it the portfolio's value.
 
 ## Where the data comes from
 

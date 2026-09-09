@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Delta } from "./Delta";
 import { renderMarkdown } from "./Markdown";
 import { useStreamedText } from "./useStreamedText";
-import { fmtPct, fmtPrice } from "@/lib/format";
+import { fmtMoney, fmtPct, fmtPrice, fmtShortDate } from "@/lib/format";
 import type { Portfolio } from "@/lib/types";
 
 function Summary({ portfolio }: { portfolio: Portfolio }) {
@@ -14,6 +14,7 @@ function Summary({ portfolio }: { portfolio: Portfolio }) {
     <section
       aria-live="polite"
       aria-busy={state === "loading" || state === "streaming"}
+      className="min-w-0"
     >
       <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2">
         <h3 className="eyebrow">The read</h3>
@@ -51,9 +52,10 @@ function Holdings({ portfolio }: { portfolio: Portfolio }) {
   const sorted = [...portfolio.holdings].sort(
     (a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity),
   );
+  const since = portfolio.since;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <section className="panel px-4 py-3">
         <div className="flex items-baseline justify-between">
           <h3 className="eyebrow">Equal-weighted session</h3>
@@ -89,27 +91,102 @@ function Holdings({ portfolio }: { portfolio: Portfolio }) {
 
       <section className="panel px-4 py-3">
         <div className="flex items-baseline justify-between">
+          <h3 className="eyebrow">Since September 1</h3>
+          <span className="data text-[0.625rem] text-[var(--muted)]">
+            From the {fmtShortDate(since.baselineDate)} close
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="data text-[1.75rem]">
+            {fmtMoney(since.currentValue)}
+          </span>
+          <span
+            className={`data text-base ${
+              (since.changePct ?? 0) >= 0
+                ? "text-[var(--up)]"
+                : "text-[var(--down)]"
+            }`}
+          >
+            {fmtPct(since.changePct)}
+          </span>
+        </div>
+        <p className="data mt-1 text-[0.6875rem] leading-relaxed text-[var(--muted)]">
+          What {fmtMoney(since.startValue)} would be worth now, split equally
+          across the {since.tracked} holdings at their{" "}
+          {fmtShortDate(since.baselineDate)} close. Hypothetical: the sheet
+          carries no share counts, so this is not the book&rsquo;s real value.
+        </p>
+
+        {since.best && since.worst && (
+          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[var(--line-soft)] pt-3">
+            <div>
+              <div className="data text-[0.8125rem]">
+                {since.best.symbol}{" "}
+                <span className="text-[var(--up)]">
+                  {fmtPct(since.best.sincePct)}
+                </span>
+              </div>
+              <div className="data mt-1 text-[0.625rem] uppercase tracking-[0.18em] text-[var(--muted)]">
+                Best since Sep 1
+              </div>
+            </div>
+            <div>
+              <div className="data text-[0.8125rem]">
+                {since.worst.symbol}{" "}
+                <span className="text-[var(--down)]">
+                  {fmtPct(since.worst.sincePct)}
+                </span>
+              </div>
+              <div className="data mt-1 text-[0.625rem] uppercase tracking-[0.18em] text-[var(--muted)]">
+                Worst since Sep 1
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="panel px-4 py-3">
+        <div className="flex items-baseline justify-between">
           <h3 className="eyebrow">Holdings</h3>
           <span className="data text-[0.625rem] text-[var(--muted)]">
             Ranked by session move
           </span>
         </div>
-        <div className="mt-1">
+
+        <div className="data mt-3 flex items-baseline justify-between gap-3 border-b border-[var(--line-soft)] pb-1.5 text-[0.5625rem] uppercase tracking-[0.18em] text-[var(--muted)]">
+          <span>Holding</span>
+          <span className="flex shrink-0 items-baseline gap-3 whitespace-nowrap">
+            <span className="w-16 text-right sm:w-20">Last</span>
+            <span className="w-14 text-right sm:w-16">Today</span>
+            <span className="w-16 text-right sm:w-24">
+              <span className="sm:hidden">Sep 1</span>
+              <span className="hidden sm:inline">Since Sep 1</span>
+            </span>
+          </span>
+        </div>
+
+        <div>
           {sorted.map((h) => (
             <div
               key={h.symbol}
               className="row-rule flex items-baseline justify-between gap-3 py-2.5"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 truncate">
                 <span className="data text-[0.8125rem]">{h.symbol}</span>
                 <span className="ml-2 text-[0.875rem] text-[var(--muted)]">
                   {h.name}
                 </span>
               </div>
               <div className="flex shrink-0 items-baseline gap-3">
-                <span className="data text-[0.8125rem]">{fmtPrice(h.price)}</span>
-                <span className="w-16 text-right">
+                <span className="data w-16 text-right text-[0.8125rem] sm:w-20">
+                  {fmtPrice(h.price)}
+                </span>
+                <span className="w-14 text-right sm:w-16">
                   <Delta pct={h.changePct} />
+                </span>
+                <span className="w-16 text-right sm:w-24">
+                  <Delta pct={h.sincePct} />
                 </span>
               </div>
             </div>

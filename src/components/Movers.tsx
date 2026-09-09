@@ -4,7 +4,9 @@ import type { Mover } from "@/lib/types";
 
 function Column({ title, movers }: { title: string; movers: Mover[] }) {
   return (
-    <div>
+    // Grid items are min-width:auto by default, which would let a long company
+    // name widen the whole grid rather than truncate.
+    <div className="min-w-0">
       <h3 className="eyebrow">{title}</h3>
       <div className="mt-1">
         {movers.map((m) => (
@@ -12,9 +14,9 @@ function Column({ title, movers }: { title: string; movers: Mover[] }) {
             key={m.symbol}
             className="row-rule flex items-baseline justify-between gap-3 py-2"
           >
-            <div className="min-w-0">
+            <div className="min-w-0 truncate">
               <span className="data text-[0.8125rem]">{m.symbol}</span>
-              <span className="ml-2 truncate text-[0.8125rem] text-[var(--muted)]">
+              <span className="ml-2 text-[0.8125rem] text-[var(--muted)]">
                 {m.name}
               </span>
             </div>

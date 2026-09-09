@@ -1,4 +1,4 @@
-import { quoteSymbol } from "./market";
+import { getBaselineClose, quoteSymbol } from "./market";
 import type { Holding, Portfolio, PortfolioId } from "./types";
 
 type Definition = {
@@ -84,6 +84,17 @@ const DEFINITIONS: Definition[] = [
   },
 ];
 
+/**
+ * The date the month-to-date block measures from. Moves are taken from the last
+ * close before this, which is the standard month-to-date base. Change this one
+ * line to re-point the section, or set it to the first of the current month to
+ * make it roll.
+ */
+export const SINCE_DATE = "2026-09-01";
+
+/** Hypothetical capital, spread equally because no share counts are available. */
+const START_CAPITAL = 10_000;
+
 export const PORTFOLIO_IDS = DEFINITIONS.map((d) => d.id);
 
 export function isPortfolioId(id: string): id is PortfolioId {
@@ -95,13 +106,22 @@ export async function getPortfolio(id: PortfolioId): Promise<Portfolio> {
 
   const holdings: Holding[] = await Promise.all(
     def.positions.map(async ([symbol, name]) => {
-      const q = await quoteSymbol(symbol);
+      const [q, base] = await Promise.all([
+        quoteSymbol(symbol),
+        getBaselineClose(symbol, SINCE_DATE),
+      ]);
+      const sincePct =
+        q.price != null && base != null && base.close !== 0
+          ? ((q.price - base.close) / base.close) * 100
+          : null;
       return {
         symbol,
         name,
         price: q.price,
         changePct: q.changePct,
         asOf: q.asOf,
+        baseline: base?.close ?? null,
+        sincePct,
       };
     }),
   );
@@ -109,6 +129,22 @@ export async function getPortfolio(id: PortfolioId): Promise<Portfolio> {
   const priced = holdings.filter((h) => h.changePct != null);
   const ranked = [...priced].sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0));
   const advancing = priced.filter((h) => (h.changePct ?? 0) > 0).length;
+
+  // Equal-weighted because the sheets carry no share counts: the same dollar
+  // amount goes into every priced holding at the baseline close.
+  const tracked = holdings.filter((h) => h.sincePct != null);
+  const perPosition = tracked.length > 0 ? START_CAPITAL / tracked.length : 0;
+  const currentValue =
+    tracked.length > 0
+      ? tracked.reduce((sum, h) => sum + perPosition * (1 + (h.sincePct ?? 0) / 100), 0)
+      : null;
+  const startValue = perPosition * tracked.length;
+  const bySince = [...tracked].sort((a, b) => (b.sincePct ?? 0) - (a.sincePct ?? 0));
+
+  const baselineDate = await getBaselineClose(
+    def.positions[0][0],
+    SINCE_DATE,
+  ).then((b) => b?.date ?? null);
 
   return {
     id: def.id,
@@ -125,6 +161,19 @@ export async function getPortfolio(id: PortfolioId): Promise<Portfolio> {
     priced: priced.length,
     best: ranked[0] ?? null,
     worst: ranked.at(-1) ?? null,
+    since: {
+      date: SINCE_DATE,
+      baselineDate,
+      startValue,
+      currentValue,
+      changePct:
+        currentValue != null && startValue > 0
+          ? (currentValue / startValue - 1) * 100
+          : null,
+      tracked: tracked.length,
+      best: bySince[0] ?? null,
+      worst: bySince.at(-1) ?? null,
+    },
   };
 }
 
