@@ -8,44 +8,9 @@ import { Portfolios } from "@/components/Portfolios";
 import { getSnapshot } from "@/lib/snapshot";
 import { getAllPortfolios } from "@/lib/portfolios";
 import { REVALIDATE } from "@/lib/http";
-import { easternNow, parseClock, sessionPhase } from "@/lib/format";
-import type { Snapshot } from "@/lib/types";
+import { sessionPhase } from "@/lib/format";
 
 export const revalidate = 300;
-
-/** One factual sentence under the masthead. No interpretation, that's the note's job. */
-function tapeLine(s: Snapshot): string {
-  const equities = s.groups[0]?.quotes ?? [];
-  const scored = equities.filter((q) => q.changePct != null);
-  const up = scored.filter((q) => (q.changePct ?? 0) > 0).length;
-  const ten = s.curve.points.find((p) => p.label === "10Y")?.yield;
-  // Counted off the clock, not the `released` flag: the calendar feed prefills
-  // figures for releases that have not happened yet, so "still to print" has to
-  // come from the scheduled time.
-  const nowMinutes = easternNow().minutes;
-  const pending = s.econ.filter((e) => {
-    const at = parseClock(e.time);
-    return at == null ? !e.released : at > nowMinutes;
-  }).length;
-
-  const parts: string[] = [];
-  if (scored.length) {
-    parts.push(
-      up === scored.length
-        ? `All ${scored.length} equity gauges higher`
-        : up === 0
-          ? `All ${scored.length} equity gauges lower`
-          : `${up} of ${scored.length} equity gauges higher`,
-    );
-  }
-  if (ten != null) parts.push(`the 10-year at ${ten.toFixed(2)}%`);
-  parts.push(
-    pending > 0
-      ? `${pending} release${pending === 1 ? "" : "s"} still to print`
-      : "the calendar already cleared",
-  );
-  return `${parts.join(", ")}.`;
-}
 
 export default async function Page() {
   const [snapshot, portfolios] = await Promise.all([
@@ -74,7 +39,7 @@ export default async function Page() {
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <span className="eyebrow">Morning recap · {dateLine}</span>
           <span className="eyebrow">
-            {phase.label} · Assembled {stamp} ET
+            {phase.label} · Updated {stamp} ET
           </span>
         </div>
 
@@ -89,10 +54,6 @@ export default async function Page() {
         >
           The Overnight
         </h1>
-
-        <p className="mt-4 max-w-2xl text-[1.0625rem] leading-relaxed text-[var(--muted)]">
-          {tapeLine(snapshot)}
-        </p>
       </header>
 
       <div className="section-rule mt-10 grid gap-10 pt-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
