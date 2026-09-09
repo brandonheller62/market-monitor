@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Overnight
 
-## Getting Started
+A morning market recap: one page that says what moved overnight, what prints
+today, and what to watch — assembled at page load from public data, with a
+written note from Claude on top of it.
 
-First, run the development server:
+![The Overnight](docs/screenshot.png)
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Every number and headline works with no configuration. The written note needs a
+Claude API key:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local   # then paste your key into ANTHROPIC_API_KEY
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Without a key the page renders in full and the note panel says the brief is off.
 
-## Learn More
+## What's on the page
 
-To learn more about Next.js, take a look at the following resources:
+| Section | What it shows |
+| --- | --- |
+| **Session strip** | The trading day 00:00–20:00 ET: which desks were open when, where today's scheduled releases land, and where "now" sits. Filled dots have printed. |
+| **The note** | Claude reads the same snapshot you're looking at and writes a pre-open desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. Streams in as it's written. |
+| **Equities / Risk, rates & real assets** | Ten gauges with session change. |
+| **Treasury curve** | The par yield curve at seven maturities, plus the 2s10s spread. |
+| **On the calendar** | Today's economic releases with actual vs. consensus vs. prior, colored by surprise. |
+| **Reporting today** | The largest companies reporting, before open or after close. |
+| **Nasdaq-100 movers** | Leaders and laggards from the index. |
+| **The wire** | Deduplicated headlines from five feeds, newest first. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Where the data comes from
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+All sources are public and keyless.
 
-## Deploy on Vercel
+| Data | Source |
+| --- | --- |
+| Quotes, movers, economic calendar, earnings calendar | `api.nasdaq.com` |
+| Treasury par yield curve | `home.treasury.gov` XML feed |
+| FX | `api.frankfurter.dev` |
+| Crypto | `api.coingecko.com` |
+| Headlines | CNBC Markets, CNBC Economy, MarketWatch, FT Markets, Federal Reserve press releases |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Two things worth knowing about the tape:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Nasdaq's public quote API only carries its own indices.** COMP and NDX are
+  real indices; everything else is read through the most liquid ETF for that
+  exposure, and the page labels the proxy under each row (`SPY`, `DIA`, `TLT`…).
+  Claude is told the same thing, so it won't call SPY "the S&P 500 index".
+- **Prices are delayed at the source.** This is a morning read, not a trading
+  screen.
+
+Any source can rate-limit or change shape. Each fetch fails to `null` rather
+than throwing, so one bad feed degrades one panel; the footer names anything
+that didn't respond on that run.
+
+## How it's wired
+
+```
+src/lib/       http.ts      fetch wrapper: browser UA, timeout, Next data cache
+               market.ts    quotes, Treasury curve, movers, FX, crypto
+               calendar.ts  economic releases + earnings, keyed to the ET date
+               news.ts      RSS parsing and dedupe
+               snapshot.ts  one fan-out across all of it, plus the text
+                            rendering that Claude reads
+src/app/       page.tsx     server component: renders the snapshot
+               api/brief/   streams the note from Claude
+src/components/             panels; SessionClock is the strip
+```
+
+The page is an ISR route revalidating every 5 minutes (`REVALIDATE` in
+`src/lib/http.ts`). Every upstream fetch shares the Next data cache, so the page
+and the brief route read identical numbers without paying for the fetches twice.
+
+The brief itself is cached in-process for 10 minutes and replayed to anyone who
+loads the page inside that window — otherwise every reload would bill a fresh
+Opus call. It runs `claude-opus-5` with adaptive thinking, streams token by
+token, and declares server-side refusal fallbacks so a declined request routes
+to another model instead of leaving an empty panel.
+
+## Deploying
+
+Deploys to Vercel as-is. Set `ANTHROPIC_API_KEY` in the project's environment
+variables for the note. Nothing else is required, and there is no database.
+
+Not investment advice.
