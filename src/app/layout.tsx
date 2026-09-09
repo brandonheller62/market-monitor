@@ -21,7 +21,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "The Overnight: morning market recap",
+  title: "Market Monitor: morning market recap",
   description:
     "A pre-open desk note: what moved overnight, what prints today, and what to watch, assembled from public market data.",
 };

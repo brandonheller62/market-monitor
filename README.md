@@ -1,10 +1,10 @@
-# The Overnight
+# Market Monitor
 
 A morning market recap: one page that says what moved overnight, what prints
 today, and what to watch, assembled at page load from public data, with a
 written note from Claude on top of it.
 
-![The Overnight](docs/screenshot.png)
+![Market Monitor](docs/screenshot.png)
 
 ## Running it
 

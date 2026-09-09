@@ -52,7 +52,7 @@ export default async function Page() {
             color: "transparent",
           }}
         >
-          The Overnight
+          Market Monitor
         </h1>
       </header>
 
