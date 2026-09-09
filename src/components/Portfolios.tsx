@@ -151,7 +151,7 @@ export function Portfolios({ portfolios }: { portfolios: Portfolio[] }) {
               onClick={() => select(p.id)}
               className={`-mb-px cursor-pointer border-b-2 pb-3 text-left transition-colors ${
                 isActive
-                  ? "border-[var(--dawn)] text-[var(--paper)]"
+                  ? "border-[var(--accent)] text-[var(--paper)]"
                   : "border-transparent text-[var(--muted)] hover:text-[var(--paper)]"
               }`}
             >

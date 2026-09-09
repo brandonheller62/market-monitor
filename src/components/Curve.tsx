@@ -40,7 +40,7 @@ export function Curve({ curve }: { curve: CurveData }) {
               className="w-full rounded-[1px]"
               style={{
                 height: p.yield != null ? `${height(p.yield)}px` : "2px",
-                background: "linear-gradient(180deg, var(--dawn), var(--dawn-deep))",
+                background: "linear-gradient(180deg, var(--accent), var(--accent-deep))",
               }}
             />
             <span className="data text-[0.625rem] text-[var(--muted)]">{p.label}</span>

@@ -43,15 +43,7 @@ export default async function Page() {
           </span>
         </div>
 
-        <h1
-          className="display mt-5 text-[clamp(2.75rem,11vw,7.5rem)]"
-          style={{
-            background: "linear-gradient(96deg, var(--paper) 30%, var(--dawn))",
-            WebkitBackgroundClip: "text",
-            backgroundClip: "text",
-            color: "transparent",
-          }}
-        >
+        <h1 className="display mt-5 text-[clamp(2.75rem,11vw,7.5rem)] text-white">
           Market Monitor
         </h1>
       </header>

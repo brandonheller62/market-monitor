@@ -30,13 +30,13 @@ export function Headlines({ headlines }: { headlines: Headline[] }) {
             rel="noreferrer"
             className="row-rule group block break-inside-avoid py-2.5"
           >
-            <span className="data text-[0.625rem] uppercase tracking-[0.15em] text-[var(--dawn)]">
+            <span className="data text-[0.625rem] uppercase tracking-[0.15em] text-[var(--accent)]">
               {h.source}
             </span>
             <span className="data ml-2 text-[0.625rem] text-[var(--muted)]">
               {timeAgo(h.published)}
             </span>
-            <div className="mt-0.5 text-[0.9375rem] leading-snug group-hover:text-[var(--dawn)]">
+            <div className="mt-0.5 text-[0.9375rem] leading-snug group-hover:text-[var(--accent)]">
               {h.title}
             </div>
           </a>
