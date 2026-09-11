@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { easternDate } from "./calendar";
 import { sessionPhase } from "./format";
 
-const MODEL = "claude-opus-5";
+const MODEL = "claude-sonnet-5";
 /** Rewrite a note at most this often; reloads inside the window replay it. */
 const NOTE_TTL_MS = 10 * 60 * 1000;
 
@@ -102,6 +102,10 @@ export function streamNote({
           max_tokens: 4000,
           system,
           thinking: { type: "adaptive" },
+          // The note is prose over data already gathered, not a reasoning
+          // problem, so the lowest effort keeps the reader from waiting on
+          // thinking they never see.
+          output_config: { effort: "low" },
           // Routes around a safety refusal instead of returning an empty note.
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",

@@ -116,7 +116,8 @@ and the brief route read identical numbers without paying for the fetches twice.
 
 The brief itself is cached in-process for 10 minutes and replayed to anyone who
 loads the page inside that window, otherwise every reload would bill a fresh
-Opus call. It runs `claude-opus-5` with adaptive thinking, streams token by
+model call. It runs `claude-sonnet-5` with adaptive thinking at low effort,
+which puts the first words on screen in well under a second, streams token by
 token, and declares server-side refusal fallbacks so a declined request routes
 to another model instead of leaving an empty panel.
 
