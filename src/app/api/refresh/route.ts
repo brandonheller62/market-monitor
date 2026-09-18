@@ -6,8 +6,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Called by Vercel Cron before the US open (see vercel.json) so a fresh desk
- * note is written before anyone arrives, rather than on the first visit.
+ * Called by Vercel Cron each weekday morning before the US open (see
+ * vercel.json). This is the only thing that rewrites the notes; they do not
+ * expire on their own, so the model is billed once a day, not per visit.
  *
  * Every call forces billed model calls, so it only runs with the CRON_SECRET
  * that Vercel sends as a bearer token. Without that variable set, it is off.

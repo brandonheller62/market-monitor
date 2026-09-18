@@ -126,20 +126,21 @@ The page is an ISR route revalidating every 5 minutes (`REVALIDATE` in
 and the notes read identical numbers without paying for the fetches twice.
 
 The notes are written on the server and rendered into the page, so they are
-there on first paint, for crawlers, and with JavaScript off. Each one is held in
-the Next data cache (`unstable_cache`, tagged `notes`): the desk note is
-rewritten at most every 15 minutes and the portfolio notes every 30. When a
-note goes stale the old one keeps being served while the new one is written,
-and if the rewrite fails (API error, refusal, truncation, timeout) the old note
-stays. A reader only sees an "unavailable" message if there has never been a
-good note, usually the first render after a deploy.
+there on first paint, for crawlers, and with JavaScript off. They are written
+**once each weekday morning**, not per visit and not on a timer: each note is
+held in the Next data cache (`unstable_cache`, tagged `notes`, no expiry), and
+the only thing that rewrites them is a Vercel Cron job (`vercel.json`) calling
+`/api/refresh` at 12:30 UTC, Monday to Friday. Every visitor between runs reads
+the cached morning note, so the API key is billed four calls a day (the desk
+note plus three books). If a rewrite fails (API error, refusal, truncation,
+timeout) the previous note stays. The one other rewrite is the first render
+after a deploy that changes `src/lib/note.ts`, which starts with an empty cache.
+
+12:30 UTC is 8:30 AM Eastern during daylight time and 7:30 AM in winter. On
+Vercel's Hobby plan a cron job can fire at any point within its scheduled hour.
 
 They run `claude-sonnet-5` with adaptive thinking at low effort and declare
 server-side refusal fallbacks, so a declined request routes to another model.
-
-A Vercel Cron job (`vercel.json`) calls `/api/refresh` at 12:30 UTC on weekdays,
-before the open, to mark the notes stale and regenerate the page, so the
-pre-open note is written before anyone arrives.
 
 ## Deploying
 

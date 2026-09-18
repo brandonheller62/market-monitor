@@ -9,15 +9,16 @@ import type { PortfolioId } from "./types";
 const MODEL = "claude-sonnet-5";
 
 /**
- * How long a written note is served before it is rewritten. The page itself
- * regenerates every five minutes, but a note only needs to move when the tape
- * does, and every rewrite is a billed model call. Portfolio notes are four
- * books' worth of calls, so they turn over more slowly.
+ * Notes never expire on a timer. Every rewrite is a billed model call, so they
+ * are rewritten once each weekday morning, when the cron job behind
+ * /api/refresh marks this tag stale (see vercel.json). Between runs every
+ * visitor gets the cached morning note. The only other rewrite is the first
+ * render after a deploy that changes this file, which starts with an empty
+ * cache.
+ *
+ * This tag is shared by every note, and marking it stale is the only way a
+ * note is rewritten.
  */
-const BRIEF_TTL = 900;
-const PORTFOLIO_TTL = 1800;
-
-/** Tag shared by every note, so the scheduled refresh can mark them all stale. */
 export const NOTES_TAG = "notes";
 
 export type Note = {
@@ -107,9 +108,9 @@ async function composeNote(system: string, user: string): Promise<Note> {
 
 /**
  * The desk note, written on the server and held in the Next data cache. When
- * it goes stale the cache serves the old note while a new one is written, and
- * if that rewrite fails the old note stays: readers never see an empty panel
- * because one model call went wrong.
+ * the morning refresh marks it stale, the old note is served while a new one
+ * is written, and if that rewrite fails the old note stays: readers never see
+ * an empty panel because one model call went wrong.
  */
 export const getBriefNote = unstable_cache(
   async (): Promise<Note> => {
@@ -120,7 +121,7 @@ export const getBriefNote = unstable_cache(
     );
   },
   ["note:brief:v2"],
-  { revalidate: BRIEF_TTL, tags: [NOTES_TAG] },
+  { revalidate: false, tags: [NOTES_TAG] },
 );
 
 /** One book's note. Same caching as the desk note, keyed by portfolio id. */
@@ -138,7 +139,7 @@ export const getPortfolioNote = unstable_cache(
     );
   },
   ["note:portfolio:v2"],
-  { revalidate: PORTFOLIO_TTL, tags: [NOTES_TAG] },
+  { revalidate: false, tags: [NOTES_TAG] },
 );
 
 /**
