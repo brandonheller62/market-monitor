@@ -130,7 +130,12 @@ there on first paint, for crawlers, and with JavaScript off. They are written
 **once each weekday morning**, not per visit and not on a timer: each note is
 held in the Next data cache (`unstable_cache`, tagged `notes`, no expiry), and
 the only thing that rewrites them is a Vercel Cron job (`vercel.json`) calling
-`/api/refresh` at 12:30 UTC, Monday to Friday. Every visitor between runs reads
+`/api/refresh` at 12:30 UTC, Monday to Friday. Before writing, the refresh
+expires every cached market response, so the note is written from live
+numbers, not whatever was cached overnight. The route needs no secret; it
+rewrites at most once a morning (a call after the notes were already written
+that day after 6 AM Eastern does nothing), so calling it again cannot run up
+the bill. Every visitor between runs reads
 the cached morning note, so the API key is billed four calls a day (the desk
 note plus three books). If a rewrite fails (API error, refusal, truncation,
 timeout) the previous note stays. The one other rewrite is the first render
@@ -145,8 +150,6 @@ server-side refusal fallbacks, so a declined request routes to another model.
 ## Deploying
 
 Deploys to Vercel as-is. Set `ANTHROPIC_API_KEY` in the project's environment
-variables for the notes, and `CRON_SECRET` (any random string) to turn on the
-scheduled refresh; without it `/api/refresh` answers 401. Nothing else is
-required, and there is no database.
+variables for the notes. Nothing else is required, and there is no database.
 
 Not investment advice.

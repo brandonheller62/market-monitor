@@ -6,6 +6,12 @@ const UA =
 export const REVALIDATE = 300;
 
 /**
+ * Tag on every upstream response, so the morning refresh can expire them all
+ * and write the note from freshly fetched numbers rather than cached ones.
+ */
+export const MARKET_TAG = "market";
+
+/**
  * Every upstream here is a public, keyless endpoint that will occasionally
  * rate-limit or change shape. Callers get `null` instead of a throw so one bad
  * feed degrades a single panel rather than the whole page.
@@ -17,7 +23,7 @@ export async function getJson<T>(
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": UA, Accept: "application/json" },
-      next: { revalidate },
+      next: { revalidate, tags: [MARKET_TAG] },
       signal: AbortSignal.timeout(12_000),
     });
     if (!res.ok) return null;
@@ -34,7 +40,7 @@ export async function getText(
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": UA, Accept: "application/xml, text/xml, */*" },
-      next: { revalidate },
+      next: { revalidate, tags: [MARKET_TAG] },
       signal: AbortSignal.timeout(12_000),
     });
     if (!res.ok) return null;
