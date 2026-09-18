@@ -1,7 +1,12 @@
 export type Quote = {
   label: string;
   symbol: string;
+  /** What the price is: a real index level, an ETF's share price, or a spot rate. */
+  kind: "index" | "etf" | "spot";
+  /** Small print under the label: "index", or the ticker and what the ETF holds. */
   note: string;
+  /** Set when every index source was down and the row shows the ETF instead. */
+  fallback?: boolean;
   price: number | null;
   change: number | null;
   changePct: number | null;

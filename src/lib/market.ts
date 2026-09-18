@@ -15,43 +15,6 @@ type NasdaqQuote = {
   } | null;
 };
 
-type BoardEntry = {
-  label: string;
-  symbol: string;
-  assetclass: "index" | "etf" | "stocks";
-  note: string;
-};
-
-/**
- * Nasdaq's public quote API only carries its own indices (COMP, NDX), so the
- * broader tape is read through the most liquid ETF for each exposure. Labels
- * name the exposure; the `note` column keeps the proxy honest on screen.
- */
-const BOARD: { title: string; caption: string; entries: BoardEntry[] }[] = [
-  {
-    title: "Equities",
-    caption: "Where the tape stands",
-    entries: [
-      { label: "Nasdaq Composite", symbol: "COMP", assetclass: "index", note: "index" },
-      { label: "Nasdaq 100", symbol: "NDX", assetclass: "index", note: "index" },
-      { label: "S&P 500", symbol: "SPY", assetclass: "etf", note: "SPY" },
-      { label: "Dow 30", symbol: "DIA", assetclass: "etf", note: "DIA" },
-      { label: "Small caps", symbol: "IWM", assetclass: "etf", note: "IWM" },
-    ],
-  },
-  {
-    title: "Risk, rates & real assets",
-    caption: "What the tape is hedging",
-    entries: [
-      { label: "Volatility", symbol: "VIXY", assetclass: "etf", note: "VIXY" },
-      { label: "Long Treasuries", symbol: "TLT", assetclass: "etf", note: "TLT" },
-      { label: "US dollar", symbol: "UUP", assetclass: "etf", note: "UUP" },
-      { label: "Gold", symbol: "GLD", assetclass: "etf", note: "GLD" },
-      { label: "Crude oil", symbol: "USO", assetclass: "etf", note: "USO" },
-    ],
-  },
-];
-
 /** One Nasdaq quote. Shared by the board and the portfolio tabs. */
 export async function quoteSymbol(
   symbol: string,
@@ -76,27 +39,194 @@ export async function quoteSymbol(
   };
 }
 
-async function quote(entry: BoardEntry): Promise<Quote> {
-  const q = await quoteSymbol(entry.symbol, entry.assetclass);
+type CboeQuote = {
+  data?: {
+    current_price?: number;
+    price_change?: number;
+    price_change_percent?: number;
+    last_trade_time?: string;
+  } | null;
+};
+
+/**
+ * Where one board row can be read from, in order of preference. `scale`
+ * converts a scaled index back to its published level: Cboe carries the Dow
+ * as DJX, one hundredth of the average.
+ */
+type Source =
+  | { from: "cboe"; symbol: string; scale?: number }
+  | { from: "nasdaq"; symbol: string; assetclass: "index" | "etf" };
+
+type BoardEntry = {
+  label: string;
+  /** Index sources, tried in order. The first fresh one wins. */
+  index: Source[];
+  /** Shown only when every index source is down, and labelled as an ETF. */
+  etf?: { symbol: string; label: string };
+};
+
+type EtfEntry = { label: string; symbol: string; note: string };
+
+/**
+ * Real index levels come from Cboe's delayed quote feed and Nasdaq's own
+ * indices. Where neither carries a spot level (Treasuries, the dollar,
+ * commodities) the row is an ETF price and says so in its label.
+ */
+const INDICES: BoardEntry[] = [
+  {
+    label: "S&P 500",
+    index: [{ from: "cboe", symbol: "_SPX" }],
+    etf: { symbol: "SPY", label: "S&P 500 ETF" },
+  },
+  {
+    label: "Dow Jones Industrials",
+    index: [{ from: "cboe", symbol: "_DJX", scale: 100 }],
+    etf: { symbol: "DIA", label: "Dow ETF" },
+  },
+  {
+    label: "Nasdaq Composite",
+    index: [{ from: "nasdaq", symbol: "COMP", assetclass: "index" }],
+    etf: { symbol: "ONEQ", label: "Nasdaq Composite ETF" },
+  },
+  {
+    label: "Nasdaq 100",
+    index: [
+      { from: "nasdaq", symbol: "NDX", assetclass: "index" },
+      { from: "cboe", symbol: "_NDX" },
+    ],
+    etf: { symbol: "QQQ", label: "Nasdaq 100 ETF" },
+  },
+  {
+    label: "Russell 2000",
+    index: [{ from: "cboe", symbol: "_RUT" }],
+    etf: { symbol: "IWM", label: "Russell 2000 ETF" },
+  },
+  {
+    label: "VIX",
+    index: [{ from: "cboe", symbol: "_VIX" }],
+    etf: { symbol: "VIXY", label: "VIX futures ETF" },
+  },
+];
+
+const ETFS: EtfEntry[] = [
+  { label: "Long Treasuries ETF", symbol: "TLT", note: "TLT · 20y+ Treasuries" },
+  { label: "US dollar ETF", symbol: "UUP", note: "UUP · dollar index futures" },
+  { label: "Gold ETF", symbol: "GLD", note: "GLD · holds bullion" },
+  { label: "Crude oil ETF", symbol: "USO", note: "USO · rolls WTI futures" },
+];
+
+/**
+ * A feed that stops updating keeps answering with its last value (Cboe's own
+ * ^DJI and ^COMP quotes froze long ago), so a quote older than this is treated
+ * as missing. Five days clears a weekend plus a holiday.
+ */
+const MAX_QUOTE_AGE_DAYS = 5;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-09-17T16:15:01" or "Sep 17, 2026 ..." -> "2026-09-17", else null. */
+function tradeDate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const iso = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  const us = raw.match(/([A-Z][a-z]{2}) (\d{1,2}), (\d{4})/);
+  if (!us) return null;
+  const month = MONTHS.indexOf(us[1]) + 1;
+  if (month === 0) return null;
+  return `${us[3]}-${String(month).padStart(2, "0")}-${us[2].padStart(2, "0")}`;
+}
+
+/** True when the quote's trade date is known and too old to show as current. */
+function isStale(asOf: string | null): boolean {
+  const date = tradeDate(asOf);
+  if (!date) return false;
+  const ageMs = Date.now() - new Date(`${date}T12:00:00Z`).getTime();
+  return ageMs > MAX_QUOTE_AGE_DAYS * 24 * 60 * 60 * 1000;
+}
+
+type Reading = { price: number | null; change: number | null; changePct: number | null; asOf: string | null };
+
+async function readCboe(symbol: string, scale = 1): Promise<Reading | null> {
+  const json = await getJson<CboeQuote>(
+    `https://cdn.cboe.com/api/global/delayed_quotes/quotes/${symbol}.json`,
+  );
+  const d = json?.data;
+  if (!d || typeof d.current_price !== "number") return null;
+  return {
+    price: d.current_price * scale,
+    change: typeof d.price_change === "number" ? d.price_change * scale : null,
+    changePct: typeof d.price_change_percent === "number" ? d.price_change_percent : null,
+    asOf: d.last_trade_time ?? null,
+  };
+}
+
+async function read(source: Source): Promise<Reading | null> {
+  let r: Reading | null;
+  if (source.from === "cboe") {
+    r = await readCboe(source.symbol, source.scale);
+  } else {
+    const { price, change, changePct, asOf } = await quoteSymbol(source.symbol, source.assetclass);
+    r = { price, change, changePct, asOf };
+  }
+  if (!r || r.price == null || isStale(r.asOf)) return null;
+  return r;
+}
+
+async function indexRow(entry: BoardEntry): Promise<Quote> {
+  for (const source of entry.index) {
+    const r = await read(source);
+    if (r) {
+      return { label: entry.label, symbol: source.symbol, kind: "index", note: "index", ...r };
+    }
+  }
+  if (entry.etf) {
+    const r = await read({ from: "nasdaq", symbol: entry.etf.symbol, assetclass: "etf" });
+    if (r) {
+      return {
+        label: entry.etf.label,
+        symbol: entry.etf.symbol,
+        kind: "etf",
+        note: `${entry.etf.symbol} · index feed down`,
+        fallback: true,
+        ...r,
+      };
+    }
+  }
+  return {
+    label: entry.label,
+    symbol: entry.index[0].symbol,
+    kind: "index",
+    note: "index",
+    price: null,
+    change: null,
+    changePct: null,
+    asOf: null,
+  };
+}
+
+async function etfRow(entry: EtfEntry): Promise<Quote> {
+  const r = await read({ from: "nasdaq", symbol: entry.symbol, assetclass: "etf" });
   return {
     label: entry.label,
     symbol: entry.symbol,
+    kind: "etf",
     note: entry.note,
-    price: q.price,
-    change: q.change,
-    changePct: q.changePct,
-    asOf: q.asOf,
+    price: r?.price ?? null,
+    change: r?.change ?? null,
+    changePct: r?.changePct ?? null,
+    asOf: r?.asOf ?? null,
   };
 }
 
 export async function getBoard(): Promise<QuoteGroup[]> {
-  return Promise.all(
-    BOARD.map(async (group) => ({
-      title: group.title,
-      caption: group.caption,
-      quotes: await Promise.all(group.entries.map(quote)),
-    })),
-  );
+  const [indices, etfs] = await Promise.all([
+    Promise.all(INDICES.map(indexRow)),
+    Promise.all(ETFS.map(etfRow)),
+  ]);
+  return [
+    { title: "Indices", caption: "Index levels", quotes: indices },
+    { title: "Rates, dollar & commodities", caption: "ETF prices, not spot levels", quotes: etfs },
+  ];
 }
 
 const CURVE_FIELDS: [string, string][] = [
@@ -191,6 +321,7 @@ export async function getCrypto(): Promise<Quote[]> {
     .map(([id, label]) => ({
       label,
       symbol: id.toUpperCase(),
+      kind: "spot" as const,
       note: "24h",
       price: json![id].usd,
       change: null,

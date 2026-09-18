@@ -1,8 +1,9 @@
 # Market Monitor
 
-A morning market recap: one page that says what moved overnight, what prints
-today, and what to watch, assembled at page load from public data, with a
-written note from Claude on top of it.
+A US markets recap: one page that says where the tape stands, what prints
+next, and what to watch, assembled from public data, with a written note from
+Claude on top of it. The masthead and the note are framed for wherever the
+session is (pre-open, intraday, after the close, weekend).
 
 ![Market Monitor](docs/screenshot.png)
 
@@ -21,14 +22,15 @@ cp.env.example.env.local   # then paste your key into ANTHROPIC_API_KEY
 npm run dev
 ```
 
-Without a key the page renders in full and the note panel says the brief is off.
+Without a key the page renders in full and the note panels say the notes are off.
 
 ## What's on the page
 
 | Section | What it shows |
 | --- | --- |
-| **The note** | Claude reads the full snapshot and writes a desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. It's framed for the current session phase (pre-open, open, after the close, weekend) and streams in as it's written. |
-| **Equities / Risk, rates & real assets** | Ten gauges with session change. |
+| **The note** | Claude reads the full snapshot and writes a desk note: the setup, what moved, what to watch, and the most plausible way the read is wrong. It's framed for the session phase at the time of writing, which the panel states, and it is written on the server, so it is in the page's HTML. |
+| **Indices** | Real index levels: S&P 500, Dow, Nasdaq Composite, Nasdaq 100, Russell 2000 and the VIX. |
+| **Rates, dollar & commodities** | ETF share prices (TLT, UUP, GLD, USO), labelled as ETFs rather than presented as spot levels. |
 | **Treasury curve** | The par yield curve at seven maturities, plus the 2s10s spread. |
 
 ### On the portfolios
@@ -42,9 +44,8 @@ and does not pretend to. What it shows is an equal-weighted read of the session:
 the average holding move and the advance/decline count, labelled as such on the
 page and in the prompt.
 
-A tab's note is written the first time you open that tab, not on page load, so
-you only pay for the books you actually look at. Once opened it stays put for
-the rest of the visit.
+Every book's note is written on the server along with the desk note, so all
+three are in the page's HTML whichever tab is open.
 
 ### Since September 1
 
@@ -73,7 +74,8 @@ All sources are public and keyless.
 
 | Data | Source |
 | --- | --- |
-| Quotes, movers, economic calendar, earnings calendar | `api.nasdaq.com` |
+| Index levels: S&P 500, Dow (as DJX × 100), Russell 2000, VIX; fallback for Nasdaq 100 | `cdn.cboe.com` delayed quotes |
+| Nasdaq indices, ETFs, stock quotes, movers, economic calendar, earnings calendar | `api.nasdaq.com` |
 | Treasury par yield curve | `home.treasury.gov` XML feed |
 | FX | `api.frankfurter.dev` |
 | Crypto | `api.coingecko.com` |
@@ -81,11 +83,18 @@ All sources are public and keyless.
 
 Two things worth knowing about the tape:
 
-- **Nasdaq's public quote API only carries its own indices.** COMP and NDX are
-  real indices; everything else is read through the most liquid ETF for that
-  exposure, and the page labels the proxy under each row (`SPY`, `DIA`, `TLT`…).
-  Claude is told the same thing, so it won't call SPY "the S&P 500 index".
-- **Prices are delayed at the source.** This is a morning read, not a trading
+- **Every index row is a real index level.** Nasdaq's quote API only carries
+  its own indices, so the rest come from Cboe. If every index source for a row
+  is down, the row falls back to its ETF, is relabelled as the ETF (for example
+  "S&P 500 ETF"), and the footer names the gap. A quote whose last trade is
+  more than five days old is treated as missing: Cboe's own `^DJI` and `^COMP`
+  quotes stopped updating long ago but still answer, which is why the Dow is
+  read from DJX.
+- **Treasuries, the dollar, gold and crude are ETF prices.** No free, keyless
+  feed carries those spot levels, so the second panel is labelled as ETFs.
+  USO and UUP hold rolling futures and track their underlying only loosely;
+  Claude is told this and is told never to quote an ETF price as a spot level.
+- **Prices are delayed at the source.** This is a recap, not a trading
   screen.
 
 The economic and earnings calendars, the market movers, FX, crypto and the
@@ -100,30 +109,43 @@ that didn't respond on that run.
 
 ```
 src/lib/       http.ts      fetch wrapper: browser UA, timeout, Next data cache
+               note.ts      writes the notes with Claude, cached server-side
+               prompts.ts   the notes' system prompts
                market.ts    quotes, Treasury curve, movers, FX, crypto
                calendar.ts  economic releases + earnings, keyed to the ET date
                news.ts      RSS parsing and dedupe
                snapshot.ts  one fan-out across all of it, plus the text
                             rendering that Claude reads
 src/app/       page.tsx     server component: renders the snapshot
-               api/brief/   streams the note from Claude
+               api/refresh/ scheduled rewrite of the notes (Vercel Cron)
 src/components/             the panels
 ```
 
 The page is an ISR route revalidating every 5 minutes (`REVALIDATE` in
 `src/lib/http.ts`). Every upstream fetch shares the Next data cache, so the page
-and the brief route read identical numbers without paying for the fetches twice.
+and the notes read identical numbers without paying for the fetches twice.
 
-The brief itself is cached in-process for 10 minutes and replayed to anyone who
-loads the page inside that window, otherwise every reload would bill a fresh
-model call. It runs `claude-sonnet-5` with adaptive thinking at low effort,
-which puts the first words on screen in well under a second, streams token by
-token, and declares server-side refusal fallbacks so a declined request routes
-to another model instead of leaving an empty panel.
+The notes are written on the server and rendered into the page, so they are
+there on first paint, for crawlers, and with JavaScript off. Each one is held in
+the Next data cache (`unstable_cache`, tagged `notes`): the desk note is
+rewritten at most every 15 minutes and the portfolio notes every 30. When a
+note goes stale the old one keeps being served while the new one is written,
+and if the rewrite fails (API error, refusal, truncation, timeout) the old note
+stays. A reader only sees an "unavailable" message if there has never been a
+good note, usually the first render after a deploy.
+
+They run `claude-sonnet-5` with adaptive thinking at low effort and declare
+server-side refusal fallbacks, so a declined request routes to another model.
+
+A Vercel Cron job (`vercel.json`) calls `/api/refresh` at 12:30 UTC on weekdays,
+before the open, to mark the notes stale and regenerate the page, so the
+pre-open note is written before anyone arrives.
 
 ## Deploying
 
 Deploys to Vercel as-is. Set `ANTHROPIC_API_KEY` in the project's environment
-variables for the note. Nothing else is required, and there is no database.
+variables for the notes, and `CRON_SECRET` (any random string) to turn on the
+scheduled refresh; without it `/api/refresh` answers 401. Nothing else is
+required, and there is no database.
 
 Not investment advice.

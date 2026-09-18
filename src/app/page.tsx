@@ -1,13 +1,18 @@
-import { Brief } from "@/components/Brief";
 import { Curve } from "@/components/Curve";
 import { Tape } from "@/components/Tape";
+import { NotePanel } from "@/components/NotePanel";
 import { Portfolios } from "@/components/Portfolios";
 import { getSnapshot } from "@/lib/snapshot";
 import { getAllPortfolios, getBenchmark } from "@/lib/portfolios";
+import { getBriefNote, getPortfolioNote, settleNote } from "@/lib/note";
+import type { NoteResult } from "@/lib/note";
+import type { PortfolioId } from "@/lib/types";
 import { REVALIDATE } from "@/lib/http";
 import { sessionPhase } from "@/lib/format";
 
 export const revalidate = 300;
+// A regeneration that has to write fresh notes waits on the model.
+export const maxDuration = 120;
 
 export default async function Page() {
   const [snapshot, portfolios, benchmark] = await Promise.all([
@@ -15,6 +20,15 @@ export default async function Page() {
     getAllPortfolios(),
     getBenchmark(),
   ]);
+  // Notes are cached apart from the page and only rewritten when stale, so
+  // most regenerations read them straight from the cache.
+  const [brief, ...bookNotes] = await Promise.all([
+    settleNote(getBriefNote()),
+    ...portfolios.map((p) => settleNote(getPortfolioNote(p.id))),
+  ]);
+  const notes = Object.fromEntries(
+    portfolios.map((p, i) => [p.id, bookNotes[i]]),
+  ) as Record<PortfolioId, NoteResult>;
   const phase = sessionPhase();
 
   const dateLine = new Intl.DateTimeFormat("en-US", {
@@ -35,10 +49,10 @@ export default async function Page() {
     <main className="mx-auto max-w-[1180px] px-5 pb-24 pt-10 sm:px-8">
       <header className="rise">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-          <span className="eyebrow">Morning recap · {dateLine}</span>
           <span className="eyebrow">
-            {phase.label} · Updated {stamp} ET
+            {phase.recap} · {dateLine}
           </span>
+          <span className="eyebrow">Data as of {stamp} ET</span>
         </div>
 
         <h1 className="display mt-5 text-[clamp(2.75rem,11vw,7.5rem)] text-white">
@@ -47,7 +61,7 @@ export default async function Page() {
       </header>
 
       <div className="section-rule mt-10 grid gap-10 pt-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <Brief />
+        <NotePanel title="The note" result={brief} />
         <div className="space-y-4">
           <Tape groups={snapshot.groups} />
           <Curve curve={snapshot.curve} />
@@ -61,7 +75,7 @@ export default async function Page() {
             Each read is written from its own holdings
           </span>
         </div>
-        <Portfolios portfolios={portfolios} benchmark={benchmark} />
+        <Portfolios portfolios={portfolios} benchmark={benchmark} notes={notes} />
       </div>
 
       <footer className="section-rule mt-12 pt-6">

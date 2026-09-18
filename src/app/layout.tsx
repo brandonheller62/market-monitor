@@ -23,7 +23,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Market Monitor",
   description:
-    "A pre-open desk note: what moved overnight, what prints today, and what to watch, assembled from public market data.",
+    "A US markets recap for wherever the session stands: real index levels, the Treasury curve, and a written desk note, assembled from public market data.",
 };
 
 export default function RootLayout({

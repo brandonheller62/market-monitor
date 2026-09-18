@@ -2,51 +2,10 @@
 
 import { useState } from "react";
 import { Delta } from "./Delta";
-import { renderMarkdown } from "./Markdown";
-import { useStreamedText } from "./useStreamedText";
+import { NotePanel } from "./NotePanel";
 import { fmtMoney, fmtPct, fmtPrice, fmtShortDate } from "@/lib/format";
-import type { Benchmark, Portfolio } from "@/lib/types";
-
-function Summary({ portfolio }: { portfolio: Portfolio }) {
-  const { text, state } = useStreamedText(`/api/portfolio/${portfolio.id}`);
-
-  return (
-    <section
-      aria-live="polite"
-      aria-busy={state === "loading" || state === "streaming"}
-      className="min-w-0"
-    >
-      <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-        <h3 className="eyebrow">The read</h3>
-        <span className="data text-[0.625rem] text-[var(--muted)]">
-          {state === "loading"
-            ? "Reading the holdings…"
-            : state === "streaming"
-              ? "Writing"
-              : state === "off"
-                ? "Unavailable"
-                : "Generated in real time with the Anthropic and Nasdaq APIs"}
-        </span>
-      </div>
-
-      <div className="brief mt-6">
-        {state === "loading" && (
-          <p className="text-[var(--muted)]">
-            Pricing {portfolio.holdings.length} positions and reading them
-            against the tape. <span className="caret" />
-          </p>
-        )}
-        {state === "off" && <p className="text-[var(--muted)]">{text}</p>}
-        {(state === "streaming" || state === "done") && (
-          <>
-            {renderMarkdown(text)}
-            {state === "streaming" && <span className="caret" />}
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
+import type { NoteResult } from "@/lib/note";
+import type { Benchmark, Portfolio, PortfolioId } from "@/lib/types";
 
 /** Points of out- or under-performance, stated as a gap rather than a ratio. */
 function gap(portfolio: number | null, bench: number | null): string {
@@ -281,19 +240,15 @@ function Holdings({
 export function Portfolios({
   portfolios,
   benchmark,
+  notes,
 }: {
   portfolios: Portfolio[];
   benchmark: Benchmark;
+  /** Written on the server, one per book, so every tab's read is in the HTML. */
+  notes: Record<PortfolioId, NoteResult>;
 }) {
   const [activeId, setActiveId] = useState(portfolios[0]?.id);
-  // A tab keeps its summary once opened, so switching back does not re-bill it.
-  const [opened, setOpened] = useState<string[]>([portfolios[0]?.id]);
   const active = portfolios.find((p) => p.id === activeId) ?? portfolios[0];
-
-  const select = (id: typeof activeId) => {
-    setActiveId(id);
-    setOpened((prev) => (prev.includes(id) ? prev : [...prev, id]));
-  };
 
   return (
     <div>
@@ -312,7 +267,7 @@ export function Portfolios({
               id={`tab-${p.id}`}
               aria-selected={isActive}
               aria-controls={`panel-${p.id}`}
-              onClick={() => select(p.id)}
+              onClick={() => setActiveId(p.id)}
               className={`-mb-px cursor-pointer border-b-2 pb-3 text-left transition-colors ${
                 isActive
                   ? "border-[var(--accent)] text-[var(--paper)]"
@@ -339,7 +294,7 @@ export function Portfolios({
           hidden={p.id !== active.id}
           className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]"
         >
-          {opened.includes(p.id) && <Summary portfolio={p} />}
+          <NotePanel title="The read" as="h3" result={notes[p.id]} />
           <Holdings portfolio={p} benchmark={benchmark} />
         </div>
       ))}

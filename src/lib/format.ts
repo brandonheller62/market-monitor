@@ -69,6 +69,8 @@ export function parseClock(t: string): number | null {
 export type SessionPhase = {
   /** Short label for the UI. */
   label: string;
+  /** What the page is at this moment, for the masthead. */
+  recap: string;
   /** Sentence Claude is given so the note is framed for the right moment. */
   description: string;
 };
@@ -90,6 +92,7 @@ export function sessionPhase(now = new Date()): SessionPhase {
   if (weekday === "Sat" || weekday === "Sun") {
     return {
       label: "Weekend",
+      recap: "Weekend recap",
       description:
         "US markets are closed for the weekend. The levels below are Friday's " +
         "close; write the note for the coming week's open.",
@@ -98,6 +101,7 @@ export function sessionPhase(now = new Date()): SessionPhase {
   if (minutes < 9 * 60 + 30) {
     return {
       label: "Pre-open",
+      recap: "Pre-open recap",
       description:
         "US cash equities have not opened yet. These are overnight and " +
         "pre-market levels; write the note for the open ahead.",
@@ -106,6 +110,7 @@ export function sessionPhase(now = new Date()): SessionPhase {
   if (minutes < 16 * 60) {
     return {
       label: "Open",
+      recap: "Intraday read",
       description:
         "The US cash session is open and these are live session levels, not a " +
         "pre-open snapshot. Write the note for the rest of the session.",
@@ -113,6 +118,7 @@ export function sessionPhase(now = new Date()): SessionPhase {
   }
   return {
     label: "After the close",
+    recap: "Closing recap",
     description:
       "US cash equities have closed. These are closing levels; write the note " +
       "as a wrap of the day just finished and a setup for tomorrow.",

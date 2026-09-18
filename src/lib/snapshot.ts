@@ -5,7 +5,7 @@ import type { Benchmark, Portfolio, Snapshot } from "./types";
 
 /**
  * One fan-out across every upstream. All of them are cached by the Next data
- * cache for REVALIDATE seconds, so the page and the /api/brief route share the
+ * cache for REVALIDATE seconds, so the page and the written notes share the
  * same numbers without paying for the fetches twice.
  */
 export async function getSnapshot(): Promise<Snapshot> {
@@ -22,8 +22,15 @@ export async function getSnapshot(): Promise<Snapshot> {
     ]);
 
   const degraded: string[] = [];
-  if (groups.every((g) => g.quotes.every((q) => q.price == null)))
+  const quotes = groups.flatMap((g) => g.quotes);
+  if (quotes.every((q) => q.price == null)) {
     degraded.push("quotes");
+  } else {
+    for (const q of quotes) {
+      if (q.price == null) degraded.push(q.label);
+      else if (q.fallback) degraded.push(`${q.label} shown in place of the index`);
+    }
+  }
   if (!curve.points.some((p) => p.yield != null)) degraded.push("Treasury curve");
   if (headlines.length === 0) degraded.push("headlines");
   if (econ.length === 0) degraded.push("economic calendar");
@@ -51,7 +58,8 @@ export function snapshotToPrompt(s: Snapshot): string {
   for (const g of s.groups) {
     lines.push(`## ${g.title}`);
     for (const q of g.quotes) {
-      lines.push(`- ${q.label} (${q.note}): ${q.price ?? "n/a"} ${pct(q.changePct)}`);
+      const what = q.kind === "index" ? "index level" : `ETF share price, ${q.note}`;
+      lines.push(`- ${q.label} (${what}): ${q.price ?? "n/a"} ${pct(q.changePct)}`);
     }
   }
 
