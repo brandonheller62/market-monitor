@@ -130,7 +130,7 @@ there on first paint, for crawlers, and with JavaScript off. They are written
 **once each weekday morning**, not per visit and not on a timer: each note is
 held in the Next data cache (`unstable_cache`, tagged `notes`, no expiry), and
 the only thing that rewrites them is a Vercel Cron job (`vercel.json`) calling
-`/api/refresh` at 12:30 UTC, Monday to Friday. Before writing, the refresh
+`/api/refresh` at 12:00 UTC, Monday to Friday. Before writing, the refresh
 expires every cached market response, so the note is written from live
 numbers, not whatever was cached overnight. The route needs no secret; it
 rewrites at most once a morning (a call after the notes were already written
@@ -141,8 +141,15 @@ note plus three books). If a rewrite fails (API error, refusal, truncation,
 timeout) the previous note stays. The one other rewrite is the first render
 after a deploy that changes `src/lib/note.ts`, which starts with an empty cache.
 
-12:30 UTC is 8:30 AM Eastern during daylight time and 7:30 AM in winter. On
+12:00 UTC is 8:00 AM Eastern during daylight time and 7:00 AM in winter. On
 Vercel's Hobby plan a cron job can fire at any point within its scheduled hour.
+
+Invalidating the tags only marks them stale; something has to request the page
+before it regenerates, so the refresh warms it itself. It warms the public
+domain rather than the host the cron arrived on: Vercel Cron arrives on the
+deployment URL, which Deployment Protection answers with a redirect to the SSO
+login, so warming that host would never reach the app. Set `SITE_ORIGIN` if
+the public domain changes.
 
 They run `claude-sonnet-5` with adaptive thinking at low effort and declare
 server-side refusal fallbacks, so a declined request routes to another model.
