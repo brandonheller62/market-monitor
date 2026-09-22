@@ -20,8 +20,8 @@ export default async function Page() {
     getAllPortfolios(),
     getBenchmark(),
   ]);
-  // Notes are cached apart from the page and only rewritten when stale, so
-  // most regenerations read them straight from the cache.
+  // Notes are cached apart from the page and rewritten at most once an hour,
+  // so most regenerations read them straight from the cache.
   const [brief, ...bookNotes] = await Promise.all([
     settleNote(getBriefNote()),
     ...portfolios.map((p) => settleNote(getPortfolioNote(p.id))),

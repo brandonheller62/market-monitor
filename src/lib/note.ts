@@ -9,17 +9,12 @@ import type { PortfolioId } from "./types";
 const MODEL = "claude-sonnet-5";
 
 /**
- * Notes never expire on a timer. Every rewrite is a billed model call, so they
- * are rewritten once each weekday morning, when the cron job behind
- * /api/refresh marks this tag stale (see vercel.json). Between runs every
- * visitor gets the cached morning note. The only other rewrite is the first
- * render after a deploy that changes this file, which starts with an empty
- * cache.
- *
- * This tag is shared by every note, and marking it stale is the only way a
- * note is rewritten.
+ * Seconds a note is held before a visit rewrites it. Every rewrite is a billed
+ * model call, so a note is written at most once an hour: the first visitor
+ * after the hour is up triggers the rewrite, and every visitor in between
+ * reads the cached note.
  */
-export const NOTES_TAG = "notes";
+export const NOTE_TTL = 3600;
 
 export type Note = {
   text: string;
@@ -107,10 +102,10 @@ async function composeNote(system: string, user: string): Promise<Note> {
 }
 
 /**
- * The desk note, written on the server and held in the Next data cache. When
- * the morning refresh marks it stale, the old note is served while a new one
- * is written, and if that rewrite fails the old note stays: readers never see
- * an empty panel because one model call went wrong.
+ * The desk note, written on the server and held in the Next data cache. Once
+ * the note is an hour old the next visit serves the old one while a new one is
+ * written behind it, and if that rewrite fails the old note stays: readers
+ * never see an empty panel because one model call went wrong.
  */
 export const getBriefNote = unstable_cache(
   async (): Promise<Note> => {
@@ -121,7 +116,7 @@ export const getBriefNote = unstable_cache(
     );
   },
   ["note:brief:v2"],
-  { revalidate: false, tags: [NOTES_TAG] },
+  { revalidate: NOTE_TTL },
 );
 
 /** One book's note. Same caching as the desk note, keyed by portfolio id. */
@@ -139,7 +134,7 @@ export const getPortfolioNote = unstable_cache(
     );
   },
   ["note:portfolio:v2"],
-  { revalidate: false, tags: [NOTES_TAG] },
+  { revalidate: NOTE_TTL },
 );
 
 /**
@@ -162,7 +157,7 @@ export async function settleNote(pending: Promise<Note>): Promise<NoteResult> {
       error:
         "This note could not be written on the last refresh. The market data " +
         "on this page is live and unaffected, and the note is retried on the " +
-        "next refresh.",
+        "next visit.",
     };
   }
 }

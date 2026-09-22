@@ -117,7 +117,6 @@ src/lib/       http.ts      fetch wrapper: browser UA, timeout, Next data cache
                snapshot.ts  one fan-out across all of it, plus the text
                             rendering that Claude reads
 src/app/       page.tsx     server component: renders the snapshot
-               api/refresh/ scheduled rewrite of the notes (Vercel Cron)
 src/components/             the panels
 ```
 
@@ -126,30 +125,16 @@ The page is an ISR route revalidating every 5 minutes (`REVALIDATE` in
 and the notes read identical numbers without paying for the fetches twice.
 
 The notes are written on the server and rendered into the page, so they are
-there on first paint, for crawlers, and with JavaScript off. They are written
-**once each weekday morning**, not per visit and not on a timer: each note is
-held in the Next data cache (`unstable_cache`, tagged `notes`, no expiry), and
-the only thing that rewrites them is a Vercel Cron job (`vercel.json`) calling
-`/api/refresh` at 12:00 UTC, Monday to Friday. Before writing, the refresh
-expires every cached market response, so the note is written from live
-numbers, not whatever was cached overnight. The route needs no secret; it
-rewrites at most once a morning (a call after the notes were already written
-that day after 6 AM Eastern does nothing), so calling it again cannot run up
-the bill. Every visitor between runs reads
-the cached morning note, so the API key is billed four calls a day (the desk
-note plus three books). If a rewrite fails (API error, refusal, truncation,
-timeout) the previous note stays. The one other rewrite is the first render
-after a deploy that changes `src/lib/note.ts`, which starts with an empty cache.
-
-12:00 UTC is 8:00 AM Eastern during daylight time and 7:00 AM in winter. On
-Vercel's Hobby plan a cron job can fire at any point within its scheduled hour.
-
-Invalidating the tags only marks them stale; something has to request the page
-before it regenerates, so the refresh warms it itself. It warms the public
-domain rather than the host the cron arrived on: Vercel Cron arrives on the
-deployment URL, which Deployment Protection answers with a redirect to the SSO
-login, so warming that host would never reach the app. Set `SITE_ORIGIN` if
-the public domain changes.
+there on first paint, for crawlers, and with JavaScript off. Each note is held
+in the Next data cache (`unstable_cache`) for an hour (`NOTE_TTL` in
+`src/lib/note.ts`). A visit to the page is what rewrites them: the first
+visitor after the hour is up is served the old note while a new one is written
+behind them, and everyone in between reads the cached note. So the API key is
+billed at most four calls an hour (the desk note plus three books) on a day
+someone is looking, and nothing at all on a day nobody is. If a rewrite fails
+(API error, refusal, truncation, timeout) the previous note stays. Notes are
+also rewritten on the first render after a deploy that changes
+`src/lib/note.ts`, which starts with an empty cache.
 
 They run `claude-sonnet-5` with adaptive thinking at low effort and declare
 server-side refusal fallbacks, so a declined request routes to another model.
