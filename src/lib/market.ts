@@ -375,3 +375,65 @@ export async function getBaselineClose(
 
   return priorSessions[0] ?? null;
 }
+
+/**
+ * Daily closes for roughly the last `days` calendar days, oldest first. Feeds
+ * the stock page's 5-day and 1-month moves and the report's price context.
+ */
+export async function getRecentCloses(
+  symbol: string,
+  days = 45,
+): Promise<{ date: string; close: number }[]> {
+  const to = new Date();
+  const from = new Date(to);
+  from.setUTCDate(from.getUTCDate() - days);
+
+  const json = await getJson<HistoricalResponse>(
+    `https://api.nasdaq.com/api/quote/${symbol}/historical` +
+      `?assetclass=stocks&fromdate=${from.toISOString().slice(0, 10)}` +
+      `&todate=${to.toISOString().slice(0, 10)}&limit=60`,
+  );
+
+  return (json?.data?.tradesTable?.rows ?? [])
+    .map((r) => ({ date: isoFromUs(r.date), close: num(r.close) }))
+    .filter((r): r is { date: string; close: number } => r.date != null && r.close != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+type SummaryResponse = {
+  data?: {
+    summaryData?: Record<string, { label: string; value: string } | undefined> | null;
+  } | null;
+};
+
+/**
+ * Nasdaq's quote summary: sector, industry, market cap, 52-week range and the
+ * analyst one-year target. Values are passed through as Nasdaq prints them.
+ */
+export async function getStockSummary(symbol: string): Promise<{
+  sector: string | null;
+  industry: string | null;
+  marketCap: number | null;
+  range52w: string | null;
+  target1y: string | null;
+  volume: string | null;
+  avgVolume: string | null;
+}> {
+  const json = await getJson<SummaryResponse>(
+    `https://api.nasdaq.com/api/quote/${symbol}/summary?assetclass=stocks`,
+  );
+  const d = json?.data?.summaryData ?? {};
+  const read = (key: string) => {
+    const v = d[key]?.value?.trim();
+    return v && v !== "N/A" ? v : null;
+  };
+  return {
+    sector: read("Sector"),
+    industry: read("Industry"),
+    marketCap: num(read("MarketCap")),
+    range52w: read("FiftTwoWeekHighLow"),
+    target1y: read("OneYrTarget"),
+    volume: read("ShareVolume"),
+    avgVolume: read("AverageVolume"),
+  };
+}

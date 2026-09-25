@@ -101,6 +101,21 @@ export function isPortfolioId(id: string): id is PortfolioId {
   return DEFINITIONS.some((d) => d.id === id);
 }
 
+/**
+ * A ticker held in any book, with every book that holds it. The stock pages
+ * and their reports are limited to these, which caps what the reports can
+ * cost: only a known list of tickers can ever trigger a model call.
+ */
+export function findHolding(
+  symbol: string,
+): { symbol: string; name: string; books: { id: PortfolioId; name: string }[] } | null {
+  const upper = symbol.toUpperCase();
+  const books = DEFINITIONS.filter((d) => d.positions.some(([s]) => s === upper));
+  if (books.length === 0) return null;
+  const name = books[0].positions.find(([s]) => s === upper)![1];
+  return { symbol: upper, name, books: books.map((d) => ({ id: d.id, name: d.name })) };
+}
+
 export async function getPortfolio(id: PortfolioId): Promise<Portfolio> {
   const def = DEFINITIONS.find((d) => d.id === id)!;
 

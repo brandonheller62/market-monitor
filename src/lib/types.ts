@@ -117,3 +117,27 @@ export type Benchmark = {
   sincePct: number | null;
   baselineDate: string | null;
 };
+
+export type StockDetail = {
+  symbol: string;
+  name: string;
+  /** Every book that holds the name. */
+  books: { id: PortfolioId; name: string }[];
+  price: number | null;
+  changePct: number | null;
+  asOf: string | null;
+  /** Moves over trailing windows, from Nasdaq's daily closes. */
+  fiveDayPct: number | null;
+  oneMonthPct: number | null;
+  /** Move from the close before SINCE_DATE, matching the portfolio tabs. */
+  sincePct: number | null;
+  sinceDate: string;
+  closes: { date: string; close: number }[];
+  sector: string | null;
+  industry: string | null;
+  marketCap: number | null;
+  range52w: string | null;
+  target1y: string | null;
+  volume: string | null;
+  avgVolume: string | null;
+};

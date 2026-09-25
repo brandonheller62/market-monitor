@@ -33,7 +33,7 @@ class NotesOffError extends Error {}
  * Belt and braces on the "never use an em dash" rule. A bolded label followed
  * by one becomes a colon; anywhere else it becomes a comma.
  */
-function stripDashes(text: string): string {
+export function stripDashes(text: string): string {
   return text.replace(/\*\*\s*—\s*/g, "**: ").replace(/\s*—\s*/g, ", ");
 }
 

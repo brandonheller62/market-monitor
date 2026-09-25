@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Delta } from "./Delta";
 import { NotePanel } from "./NotePanel";
@@ -190,7 +191,7 @@ function Holdings({
         <div className="flex items-baseline justify-between">
           <h3 className="eyebrow">Holdings</h3>
           <span className="data text-[0.625rem] text-[var(--muted)]">
-            Ranked by session move
+            Ranked by session move · tap one for its report
           </span>
         </div>
 
@@ -208,12 +209,16 @@ function Holdings({
 
         <div>
           {sorted.map((h) => (
-            <div
+            <Link
               key={h.symbol}
-              className="row-rule flex items-baseline justify-between gap-3 py-2.5"
+              href={`/stock/${h.symbol}`}
+              prefetch={false}
+              className="row-rule group -mx-2 flex items-baseline justify-between gap-3 px-2 py-2.5 transition-colors hover:bg-[var(--ink-3)]"
             >
               <div className="min-w-0 truncate">
-                <span className="data text-[0.8125rem]">{h.symbol}</span>
+                <span className="data text-[0.8125rem] underline decoration-transparent underline-offset-4 transition-colors group-hover:decoration-[var(--accent)]">
+                  {h.symbol}
+                </span>
                 <span className="ml-2 text-[0.875rem] text-[var(--muted)]">
                   {h.name}
                 </span>
@@ -229,7 +234,7 @@ function Holdings({
                   <Delta pct={h.sincePct} />
                 </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

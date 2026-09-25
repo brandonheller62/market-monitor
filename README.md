@@ -68,6 +68,35 @@ hypothetical: what $10,000 split equally across the priced holdings at that
 close would be worth now. The page says so under the number, and the prompt
 forbids the note from calling it the portfolio's value.
 
+### Stock reports
+
+Every holding row links to `/stock/<TICKER>`: the live quote, the move today,
+over five sessions, over a month and since September 1, the company's sector,
+market cap, 52-week range and analyst target, and which books hold it.
+
+Beside those numbers is a report from Claude: what happened in the news
+recently, why the stock is moving, what comes next, a bull and a bear case,
+and a lean (higher, lower or sideways over the next few weeks, with a
+confidence level and what would flip it). It never gives a price target of
+its own. Claude researches it with the web search tool, and the pages it
+cites are listed under the report.
+
+Reports cost more than the notes, because each one runs up to five billed
+searches, so they are guarded three ways:
+
+- Only tickers in `src/lib/portfolios.ts` have a page or a report; anything
+  else is a 404.
+- The page itself carries no report. The browser asks for it with a POST to
+  `/api/report/<TICKER>` after the page loads, so a crawler following the
+  holding links never starts one.
+- Each ticker's report is cached for an hour (`REPORT_TTL` in
+  `src/lib/report.ts`), with the same keep-the-last-good-one behaviour as the
+  notes. A fresh report takes about 20 seconds; a cached one loads at once.
+
+They use the basic `web_search_20250305` tool rather than the newer
+`web_search_20260209`: the newer one filters results through a code sandbox,
+which was several times slower here and left the report without citations.
+
 ## Where the data comes from
 
 All sources are public and keyless.
@@ -116,7 +145,11 @@ src/lib/       http.ts      fetch wrapper: browser UA, timeout, Next data cache
                news.ts      RSS parsing and dedupe
                snapshot.ts  one fan-out across all of it, plus the text
                             rendering that Claude reads
+               stock.ts     one holding's quote, history and company facts
+               report.ts    the per-stock report, researched with web search
 src/app/       page.tsx     server component: renders the snapshot
+               stock/[symbol]/page.tsx       one holding's page
+               api/report/[symbol]/route.ts  writes that holding's report
 src/components/             the panels
 ```
 
