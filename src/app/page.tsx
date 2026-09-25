@@ -30,6 +30,8 @@ export default async function Page() {
     portfolios.map((p, i) => [p.id, bookNotes[i]]),
   ) as Record<PortfolioId, NoteResult>;
   const phase = sessionPhase();
+  // The desk note writes its own headline; until it has one, fall back to the name.
+  const headline = ("note" in brief && brief.note.headline) || "Market Monitor";
 
   const dateLine = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -50,13 +52,13 @@ export default async function Page() {
       <header className="rise">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <span className="eyebrow">
-            {phase.recap} · {dateLine}
+            Market Monitor · {phase.recap} · {dateLine}
           </span>
           <span className="eyebrow">Data as of {stamp} ET</span>
         </div>
 
-        <h1 className="display mt-5 text-[clamp(2.75rem,11vw,7.5rem)] text-white">
-          Market Monitor
+        <h1 className="display mt-5 max-w-[22ch] text-balance text-[clamp(2rem,6vw,4.5rem)] leading-[1.02] text-white">
+          {headline}
         </h1>
       </header>
 
@@ -75,7 +77,11 @@ export default async function Page() {
             Each read is written from its own holdings
           </span>
         </div>
-        <Portfolios portfolios={portfolios} benchmark={benchmark} notes={notes} />
+        <Portfolios
+          portfolios={portfolios}
+          benchmark={benchmark}
+          notes={notes}
+        />
       </div>
 
       <footer className="section-rule mt-12 pt-6">

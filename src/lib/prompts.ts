@@ -32,7 +32,11 @@ Rules:
   it for that moment rather than assuming the market is about to open.
 - Never use an em dash. Use a colon, a comma, or a second sentence instead.
 
-Format your answer as exactly these sections, in Markdown:
+Start with one line, before the sections: "Headline: " followed by a front-page
+headline for the note, under 60 characters. It carries the setup in plain words,
+in sentence case, with no period and no ticker symbols.
+
+Then format the rest of your answer as exactly these sections, in Markdown:
 
 **The setup**: one paragraph, 2-3 sentences. The single sentence a trader
 would say walking onto the desk, plus the context that makes it true.

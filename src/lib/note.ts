@@ -18,6 +18,8 @@ export const NOTE_TTL = 3600;
 
 export type Note = {
   text: string;
+  /** One-line headline, when the prompt asks for one (the desk note does). */
+  headline?: string;
   /** ISO time the model finished writing. */
   writtenAt: string;
   /** Session phase label at the time of writing, e.g. "Pre-open". */
@@ -98,7 +100,27 @@ async function composeNote(system: string, user: string): Promise<Note> {
     system,
     `It is ${nowInEastern()} ET. ${phase.description}\n\n${user}`,
   );
-  return { text, writtenAt: new Date().toISOString(), phase: phase.label };
+  const { headline, body } = splitHeadline(text);
+  return {
+    text: body,
+    headline,
+    writtenAt: new Date().toISOString(),
+    phase: phase.label,
+  };
+}
+
+/** Pulls a leading "Headline: ..." line off a note, if the model wrote one. */
+export function splitHeadline(text: string): {
+  headline?: string;
+  body: string;
+} {
+  const match = text.match(/^\s*\**headline\**:\**\s*(.+?)\s*\**\s*(?:\n|$)/i);
+  if (!match) return { body: text };
+  const headline = match[1].replace(/[*_]/g, "").replace(/\.$/, "").trim();
+  return {
+    headline: headline || undefined,
+    body: text.slice(match[0].length).trim(),
+  };
 }
 
 /**
@@ -115,7 +137,7 @@ export const getBriefNote = unstable_cache(
       "Write today's note from this snapshot.\n\n" + snapshotToPrompt(snapshot),
     );
   },
-  ["note:brief:v2"],
+  ["note:brief:v3"],
   { revalidate: NOTE_TTL },
 );
 
