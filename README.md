@@ -169,7 +169,7 @@ someone is looking, and nothing at all on a day nobody is. If a rewrite fails
 also rewritten on the first render after a deploy that changes
 `src/lib/note.ts`, which starts with an empty cache.
 
-They run `claude-sonnet-5` with adaptive thinking at low effort and declare
+They run `claude-sonnet-5-5` with adaptive thinking at low effort and declare
 server-side refusal fallbacks, so a declined request routes to another model.
 
 ## Deploying

@@ -6,7 +6,7 @@ import { getBenchmark, getPortfolio } from "./portfolios";
 import { BRIEF_SYSTEM, PORTFOLIO_SYSTEM } from "./prompts";
 import type { PortfolioId } from "./types";
 
-const MODEL = "claude-sonnet-5";
+const MODEL = "claude-sonnet-5-5";
 
 /**
  * Seconds a note is held before a visit rewrites it. Every rewrite is a billed

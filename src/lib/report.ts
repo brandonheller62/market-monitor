@@ -6,7 +6,7 @@ import { STOCK_SYSTEM } from "./prompts";
 import { getStock } from "./stock";
 import type { StockDetail } from "./types";
 
-const MODEL = "claude-sonnet-5";
+const MODEL = "claude-sonnet-5-5";
 
 /**
  * Seconds a stock report is held before a request rewrites it. A report runs
