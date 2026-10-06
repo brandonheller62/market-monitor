@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { BenchmarkSkeleton, StockBenchmarkCard } from "@/components/BenchmarkCard";
 import { Delta } from "@/components/Delta";
 import { StockReport } from "@/components/StockReport";
 import { fmtCap, fmtPct, fmtPrice, fmtShortDate } from "@/lib/format";
@@ -88,6 +90,10 @@ export default async function StockPage({ params }: PageProps<"/stock/[symbol]">
               ))}
             </div>
           </section>
+
+          <Suspense fallback={<BenchmarkSkeleton />}>
+            <StockBenchmarkCard symbol={stock.symbol} />
+          </Suspense>
 
           <section className="panel px-4 py-3">
             <h2 className="eyebrow">The company</h2>

@@ -11,6 +11,7 @@
   --accent: #d9c49a;
   --accent-deep: #8e7a52;
   --up: #58d3b7;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --down: #f2726f;
   --hair: 1px;
 }
@@ -173,6 +174,63 @@ a {
 @keyframes pulse {
   50% {
     opacity: 0.25;
+  }
+}
+
+/* ---- chart zoom ------------------------------------------------------ */
+
+/* The lines reveal left to right at an even pace, so each session gets the
+   same share of the time and the drawing reads as time passing. */
+.draw-lines {
+  animation: draw-lines 1.5s linear both;
+}
+
+@keyframes draw-lines {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.chart-zoom {
+  margin: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--paper);
+  max-width: none;
+  max-height: none;
+}
+
+.chart-zoom[open] {
+  animation: zoom-in 240ms var(--ease-out) both;
+}
+
+.chart-zoom::backdrop {
+  background: rgb(5 8 12 / 0.72);
+  animation: fade-in 240ms var(--ease-out) both;
+}
+
+@keyframes zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep a gentle fade in place of the drawing and the scale. */
+  .draw-lines,
+  .chart-zoom[open] {
+    animation: fade-in 300ms ease both !important;
   }
 }
 

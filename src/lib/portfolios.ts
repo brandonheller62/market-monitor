@@ -101,6 +101,12 @@ export function isPortfolioId(id: string): id is PortfolioId {
   return DEFINITIONS.some((d) => d.id === id);
 }
 
+/** A book's name and tickers, for reads that need only the list. */
+export function portfolioSymbols(id: PortfolioId): { name: string; symbols: string[] } {
+  const def = DEFINITIONS.find((d) => d.id === id)!;
+  return { name: def.name, symbols: def.positions.map(([s]) => s) };
+}
+
 /**
  * A ticker held in any book, with every book that holds it. The stock pages
  * and their reports are limited to these, which caps what the reports can

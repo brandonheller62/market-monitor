@@ -379,11 +379,17 @@ export async function getBaselineClose(
 
 /**
  * Daily closes for roughly the last `days` calendar days, oldest first. Feeds
- * the stock page's 5-day and 1-month moves and the report's price context.
+ * the stock page's 5-day and 1-month moves, the vs-S&P charts and the
+ * report's price context.
+ *
+ * Cached for an hour: settled closes change once a day, and the portfolio
+ * charts read every holding's history, so a short cache would put dozens of
+ * extra requests on Nasdaq per page regeneration.
  */
 export async function getRecentCloses(
   symbol: string,
   days = 45,
+  assetclass: "etf" | "stocks" = "stocks",
 ): Promise<{ date: string; close: number }[]> {
   const to = new Date();
   const from = new Date(to);
@@ -391,8 +397,9 @@ export async function getRecentCloses(
 
   const json = await getJson<HistoricalResponse>(
     `https://api.nasdaq.com/api/quote/${symbol}/historical` +
-      `?assetclass=stocks&fromdate=${from.toISOString().slice(0, 10)}` +
+      `?assetclass=${assetclass}&fromdate=${from.toISOString().slice(0, 10)}` +
       `&todate=${to.toISOString().slice(0, 10)}&limit=60`,
+    60 * 60,
   );
 
   return (json?.data?.tradesTable?.rows ?? [])

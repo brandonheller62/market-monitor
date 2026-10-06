@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { BenchmarkSkeleton, PortfolioBenchmarkCard } from "@/components/BenchmarkCard";
 import { Curve } from "@/components/Curve";
 import { Tape } from "@/components/Tape";
 import { NotePanel } from "@/components/NotePanel";
@@ -29,6 +31,16 @@ export default async function Page() {
   const notes = Object.fromEntries(
     portfolios.map((p, i) => [p.id, bookNotes[i]]),
   ) as Record<PortfolioId, NoteResult>;
+  // Each book's vs-S&P chart streams in on its own so the page never waits on
+  // the holdings' price histories.
+  const charts = Object.fromEntries(
+    portfolios.map((p) => [
+      p.id,
+      <Suspense key={p.id} fallback={<BenchmarkSkeleton as="h3" />}>
+        <PortfolioBenchmarkCard id={p.id} />
+      </Suspense>,
+    ]),
+  ) as Record<PortfolioId, React.ReactNode>;
   const phase = sessionPhase();
   // The desk note writes its own headline; until it has one, fall back to the name.
   const headline = ("note" in brief && brief.note.headline) || "Market Monitor";
@@ -81,6 +93,7 @@ export default async function Page() {
           portfolios={portfolios}
           benchmark={benchmark}
           notes={notes}
+          charts={charts}
         />
       </div>
 
