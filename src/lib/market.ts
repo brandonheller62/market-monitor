@@ -344,8 +344,9 @@ function isoFromUs(date: string): string | null {
 
 /**
  * The last closing price strictly before `since`, which is the base a
- * month-to-date move is measured from. Reaches back two weeks so a holiday or
- * weekend on the boundary still resolves to a real session.
+ * month-to-date move is measured from. Reaches back 45 days: Nasdaq returns an
+ * empty table for short windows that end more than a few weeks ago (a 14-day
+ * window ending Sep 1 came back with zero rows by October), so ask wide.
  *
  * Cached for six hours: a settled historical close does not change.
  */
@@ -355,12 +356,12 @@ export async function getBaselineClose(
   assetclass: "etf" | "stocks" = "stocks",
 ): Promise<{ date: string; close: number } | null> {
   const from = new Date(`${since}T00:00:00Z`);
-  from.setUTCDate(from.getUTCDate() - 14);
+  from.setUTCDate(from.getUTCDate() - 45);
   const fromdate = from.toISOString().slice(0, 10);
 
   const json = await getJson<HistoricalResponse>(
     `https://api.nasdaq.com/api/quote/${symbol}/historical` +
-      `?assetclass=${assetclass}&fromdate=${fromdate}&todate=${since}&limit=20`,
+      `?assetclass=${assetclass}&fromdate=${fromdate}&todate=${since}&limit=60`,
     6 * 60 * 60,
   );
 
