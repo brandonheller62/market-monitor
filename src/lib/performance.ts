@@ -55,6 +55,25 @@ function liveRelative(price: number | null, closes: Closes, calendar: string[]):
   return price / base;
 }
 
+/**
+ * Runs `fn` over `items` with at most `limit` in flight. The home page
+ * already fires about a hundred Nasdaq requests per regeneration; firing
+ * every holding's history on top of that at once gets the burst throttled,
+ * so the book charts queue theirs.
+ */
+async function pooled<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 async function spyHistory() {
   const [closes, q] = await Promise.all([
     getRecentCloses("SPY", 45, "etf"),
@@ -121,12 +140,10 @@ export async function getPortfolioPerformance(
   const { symbols } = portfolioSymbols(id);
   const [spy, holdings] = await Promise.all([
     spyHistory(),
-    Promise.all(
-      symbols.map(async (s) => {
-        const [closes, q] = await Promise.all([getRecentCloses(s), quoteSymbol(s)]);
-        return { closes, price: q.price };
-      }),
-    ),
+    pooled(symbols, 4, async (s) => {
+      const [closes, q] = await Promise.all([getRecentCloses(s), quoteSymbol(s)]);
+      return { closes, price: q.price };
+    }),
   ]);
   if (spy.closes.length < SESSIONS) return null;
 
