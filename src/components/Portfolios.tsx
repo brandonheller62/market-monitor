@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Delta } from "./Delta";
 import { NotePanel } from "./NotePanel";
+import { PortfolioBenchmarkCard } from "./PortfolioBenchmarkCard";
 import { fmtMoney, fmtPct, fmtPrice, fmtShortDate } from "@/lib/format";
 import type { NoteResult } from "@/lib/note";
 import type { Benchmark, Portfolio, PortfolioId } from "@/lib/types";
@@ -84,11 +85,12 @@ function BenchmarkPanel({
 function Holdings({
   portfolio,
   benchmark,
-  chart,
+  union,
 }: {
   portfolio: Portfolio;
   benchmark: Benchmark;
-  chart: React.ReactNode;
+  /** Every book's tickers plus SPY, so all three charts share one request. */
+  union: string[];
 }) {
   const sorted = [...portfolio.holdings].sort(
     (a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity),
@@ -189,7 +191,10 @@ function Holdings({
 
       <BenchmarkPanel benchmark={benchmark} portfolio={portfolio} />
 
-      {chart}
+      <PortfolioBenchmarkCard
+        symbols={portfolio.holdings.map((h) => h.symbol)}
+        union={union}
+      />
 
       <section className="panel px-4 py-3">
         <div className="flex items-baseline justify-between">
@@ -250,17 +255,18 @@ export function Portfolios({
   portfolios,
   benchmark,
   notes,
-  charts,
 }: {
   portfolios: Portfolio[];
   benchmark: Benchmark;
   /** Written on the server, one per book, so every tab's read is in the HTML. */
   notes: Record<PortfolioId, NoteResult>;
-  /** Server-rendered vs-S&P cards, one per book. */
-  charts: Record<PortfolioId, React.ReactNode>;
 }) {
   const [activeId, setActiveId] = useState(portfolios[0]?.id);
   const active = portfolios.find((p) => p.id === activeId) ?? portfolios[0];
+  const union = [
+    "SPY",
+    ...new Set(portfolios.flatMap((p) => p.holdings.map((h) => h.symbol))),
+  ];
 
   return (
     <div>
@@ -307,7 +313,7 @@ export function Portfolios({
           className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]"
         >
           <NotePanel title="The read" as="h3" result={notes[p.id]} />
-          <Holdings portfolio={p} benchmark={benchmark} chart={charts[p.id]} />
+          <Holdings portfolio={p} benchmark={benchmark} union={union} />
         </div>
       ))}
     </div>

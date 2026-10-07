@@ -1,29 +1,7 @@
 import { getRecentCloses, quoteSymbol } from "./market";
-import { portfolioSymbols } from "./portfolios";
-import type { PortfolioId } from "./types";
+import { SESSIONS, type Closes, type Performance, type PerfPoint } from "./perf-math";
 
-/** One point on a vs-S&P chart, both values in percent from day one. */
-export type PerfPoint = {
-  /** ISO date of the close, or null for the live quote after the last close. */
-  date: string | null;
-  subject: number;
-  bench: number;
-};
-
-export type Performance = {
-  points: PerfPoint[];
-  subjectPct: number;
-  benchPct: number;
-};
-
-type Closes = { date: string; close: number }[];
-
-/**
- * Sessions in the window, counting the base. The stock page's "1 month" is
- * the move from the close 21 sessions before the latest, so the chart starts
- * on that same close and both read the same number.
- */
-const SESSIONS = 22;
+export type { Performance, PerfPoint };
 
 /**
  * Value on each calendar date relative to the first, carrying the last close
@@ -53,25 +31,6 @@ function liveRelative(price: number | null, closes: Closes, calendar: string[]):
   const base = byDate.get(calendar[0]);
   if (price == null || base == null || base === 0) return null;
   return price / base;
-}
-
-/**
- * Runs `fn` over `items` with at most `limit` in flight. The home page
- * already fires about a hundred Nasdaq requests per regeneration; firing
- * every holding's history on top of that at once gets the burst throttled,
- * so the book charts queue theirs.
- */
-async function pooled<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  async function worker() {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i]);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return out;
 }
 
 async function spyHistory() {
@@ -126,50 +85,4 @@ export async function getStockPerformance(symbol: string): Promise<Performance |
     liveRelative(q.price, closes, calendar),
     liveRelative(spy.price, spy.closes, calendar),
   );
-}
-
-/**
- * A book against SPY on SPY's last 22 sessions. Equal-weighted buy-and-hold:
- * the same dollars go into every holding at the first close and are left
- * alone, the method the "Since September 1" card uses. Holdings without a
- * close on day one are left out rather than guessed at.
- */
-export async function getPortfolioPerformance(
-  id: PortfolioId,
-): Promise<(Performance & { tracked: number; total: number }) | null> {
-  const { symbols } = portfolioSymbols(id);
-  const [spy, holdings] = await Promise.all([
-    spyHistory(),
-    pooled(symbols, 4, async (s) => {
-      const [closes, q] = await Promise.all([getRecentCloses(s), quoteSymbol(s)]);
-      return { closes, price: q.price };
-    }),
-  ]);
-  if (spy.closes.length < SESSIONS) return null;
-
-  const calendar = spy.closes.slice(-SESSIONS).map((c) => c.date);
-  const bench = relatives(spy.closes, calendar);
-  const lines = holdings
-    .map((h) => {
-      const rel = relatives(h.closes, calendar);
-      if (!rel) return null;
-      return { rel, live: liveRelative(h.price, h.closes, calendar) ?? rel.at(-1)! };
-    })
-    .filter((l) => l != null);
-  if (!bench || lines.length === 0) return null;
-
-  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-  const subject = calendar.map((_, i) => mean(lines.map((l) => l.rel[i])));
-
-  return {
-    ...assemble(
-      calendar,
-      subject,
-      bench,
-      mean(lines.map((l) => l.live)),
-      liveRelative(spy.price, spy.closes, calendar),
-    ),
-    tracked: lines.length,
-    total: symbols.length,
-  };
 }

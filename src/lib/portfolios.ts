@@ -101,6 +101,11 @@ export function isPortfolioId(id: string): id is PortfolioId {
   return DEFINITIONS.some((d) => d.id === id);
 }
 
+/** Every ticker held in any book, deduplicated, plus the SPY benchmark. */
+export function allSymbols(): string[] {
+  return ["SPY", ...new Set(DEFINITIONS.flatMap((d) => d.positions.map(([s]) => s)))];
+}
+
 /** A book's name and tickers, for reads that need only the list. */
 export function portfolioSymbols(id: PortfolioId): { name: string; symbols: string[] } {
   const def = DEFINITIONS.find((d) => d.id === id)!;
