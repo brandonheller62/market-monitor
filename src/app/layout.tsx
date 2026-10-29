@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono, Newsreader } from "next/font/google";
+import { SiteNav } from "@/components/SiteNav";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body
         className={`${archivo.variable} ${newsreader.variable} ${plexMono.variable}`}
       >
+        <SiteNav />
         {children}
       </body>
     </html>

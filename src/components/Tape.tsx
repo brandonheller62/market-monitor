@@ -1,12 +1,16 @@
+import Link from "next/link";
 import { Delta } from "./Delta";
 import { fmtPrice } from "@/lib/format";
 import type { Quote, QuoteGroup } from "@/lib/types";
 
 function Row({ q }: { q: Quote }) {
-  return (
-    <div className="row-rule flex items-baseline justify-between gap-3 py-2.5">
+  const body = (
+    <>
       <div className="min-w-0">
-        <div className="truncate text-[0.9375rem]">{q.label}</div>
+        <div className="truncate text-[0.9375rem]">
+          {q.label}
+          {q.href && <span className="ml-1.5 text-[var(--muted)] transition-colors group-hover:text-[var(--accent)]">&rarr;</span>}
+        </div>
         <div className="data text-[0.625rem] uppercase tracking-[0.18em] text-[var(--muted)]">
           {q.note}
         </div>
@@ -15,7 +19,17 @@ function Row({ q }: { q: Quote }) {
         <div className="data text-[0.9375rem]">{fmtPrice(q.price)}</div>
         <Delta pct={q.changePct} />
       </div>
-    </div>
+    </>
+  );
+  const row = "row-rule flex items-baseline justify-between gap-3 py-2.5";
+  if (!q.href) return <div className={row}>{body}</div>;
+  return (
+    <Link
+      href={q.href}
+      className={`${row} group -mx-4 px-4 transition-colors hover:bg-[color-mix(in_srgb,var(--paper)_4%,transparent)]`}
+    >
+      {body}
+    </Link>
   );
 }
 

@@ -7,6 +7,8 @@ export type Quote = {
   note: string;
   /** Set when every index source was down and the row shows the ETF instead. */
   fallback?: boolean;
+  /** Set on rows that open their own price-history page. */
+  href?: string;
   price: number | null;
   change: number | null;
   changePct: number | null;
@@ -140,4 +142,7 @@ export type StockDetail = {
   target1y: string | null;
   volume: string | null;
   avgVolume: string | null;
+  /** Dollars per share over a year, at the current rate. */
+  annualDividend: number | null;
+  dividendYieldPct: number | null;
 };

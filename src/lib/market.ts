@@ -65,7 +65,7 @@ type BoardEntry = {
   etf?: { symbol: string; label: string };
 };
 
-type EtfEntry = { label: string; symbol: string; note: string };
+type EtfEntry = { label: string; symbol: string; note: string; chart?: boolean };
 
 /**
  * Real index levels come from Cboe's delayed quote feed and Nasdaq's own
@@ -111,9 +111,17 @@ const INDICES: BoardEntry[] = [
 const ETFS: EtfEntry[] = [
   { label: "Long Treasuries ETF", symbol: "TLT", note: "TLT · 20y+ Treasuries" },
   { label: "US dollar ETF", symbol: "UUP", note: "UUP · dollar index futures" },
-  { label: "Gold ETF", symbol: "GLD", note: "GLD · holds bullion" },
-  { label: "Crude oil ETF", symbol: "USO", note: "USO · rolls WTI futures" },
+  { label: "Gold ETF", symbol: "GLD", note: "GLD · holds bullion", chart: true },
+  { label: "Crude oil ETF", symbol: "USO", note: "USO · rolls WTI futures", chart: true },
 ];
+
+/** The commodity ETFs that open a price-history page from the tape. */
+export const CHARTED_ETFS = ETFS.filter((e) => e.chart);
+
+export function findChartedEtf(symbol: string): EtfEntry | null {
+  const upper = symbol.toUpperCase();
+  return CHARTED_ETFS.find((e) => e.symbol === upper) ?? null;
+}
 
 /**
  * A feed that stops updating keeps answering with its last value (Cboe's own
@@ -211,6 +219,7 @@ async function etfRow(entry: EtfEntry): Promise<Quote> {
     symbol: entry.symbol,
     kind: "etf",
     note: entry.note,
+    href: entry.chart ? `/etf/${entry.symbol}` : undefined,
     price: r?.price ?? null,
     change: r?.change ?? null,
     changePct: r?.changePct ?? null,
@@ -391,6 +400,9 @@ export async function getRecentCloses(
   days = 45,
   assetclass: "etf" | "stocks" = "stocks",
 ): Promise<{ date: string; close: number }[]> {
+  // About 21 sessions a month against 30 calendar days, so `days` rows always
+  // covers the window; 60 is the floor the short windows have always asked for.
+  const limit = Math.max(60, days);
   const to = new Date();
   const from = new Date(to);
   from.setUTCDate(from.getUTCDate() - days);
@@ -398,7 +410,7 @@ export async function getRecentCloses(
   const json = await getJson<HistoricalResponse>(
     `https://api.nasdaq.com/api/quote/${symbol}/historical` +
       `?assetclass=${assetclass}&fromdate=${from.toISOString().slice(0, 10)}` +
-      `&todate=${to.toISOString().slice(0, 10)}&limit=60`,
+      `&todate=${to.toISOString().slice(0, 10)}&limit=${limit}`,
     60 * 60,
   );
 
@@ -426,6 +438,8 @@ export async function getStockSummary(symbol: string): Promise<{
   target1y: string | null;
   volume: string | null;
   avgVolume: string | null;
+  annualDividend: number | null;
+  dividendYieldPct: number | null;
 }> {
   const json = await getJson<SummaryResponse>(
     `https://api.nasdaq.com/api/quote/${symbol}/summary?assetclass=stocks`,
@@ -443,5 +457,7 @@ export async function getStockSummary(symbol: string): Promise<{
     target1y: read("OneYrTarget"),
     volume: read("ShareVolume"),
     avgVolume: read("AverageVolume"),
+    annualDividend: num(read("AnnualizedDividend")),
+    dividendYieldPct: num(read("Yield")),
   };
 }

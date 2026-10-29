@@ -1,12 +1,8 @@
 import { Curve } from "@/components/Curve";
 import { Tape } from "@/components/Tape";
 import { NotePanel } from "@/components/NotePanel";
-import { Portfolios } from "@/components/Portfolios";
 import { getSnapshot } from "@/lib/snapshot";
-import { getAllPortfolios, getBenchmark } from "@/lib/portfolios";
-import { getBriefNote, getPortfolioNote, settleNote } from "@/lib/note";
-import type { NoteResult } from "@/lib/note";
-import type { PortfolioId } from "@/lib/types";
+import { getBriefNote, settleNote } from "@/lib/note";
 import { REVALIDATE } from "@/lib/http";
 import { sessionPhase } from "@/lib/format";
 
@@ -15,20 +11,12 @@ export const revalidate = 300;
 export const maxDuration = 120;
 
 export default async function Page() {
-  const [snapshot, portfolios, benchmark] = await Promise.all([
+  const [snapshot, brief] = await Promise.all([
     getSnapshot(),
-    getAllPortfolios(),
-    getBenchmark(),
-  ]);
-  // Notes are cached apart from the page and rewritten at most once an hour,
-  // so most regenerations read them straight from the cache.
-  const [brief, ...bookNotes] = await Promise.all([
+    // The note is cached apart from the page and rewritten at most once an
+    // hour, so most regenerations read it straight from the cache.
     settleNote(getBriefNote()),
-    ...portfolios.map((p) => settleNote(getPortfolioNote(p.id))),
   ]);
-  const notes = Object.fromEntries(
-    portfolios.map((p, i) => [p.id, bookNotes[i]]),
-  ) as Record<PortfolioId, NoteResult>;
   const phase = sessionPhase();
   // The desk note writes its own headline; until it has one, fall back to the name.
   const headline = ("note" in brief && brief.note.headline) || "Market Monitor";
@@ -68,20 +56,6 @@ export default async function Page() {
           <Tape groups={snapshot.groups} />
           <Curve curve={snapshot.curve} />
         </div>
-      </div>
-
-      <div className="section-rule mt-12 pt-10">
-        <div className="mb-6 flex items-baseline justify-between">
-          <span className="eyebrow">Portfolios</span>
-          <span className="data text-[0.625rem] text-[var(--muted)]">
-            Each read is written from its own holdings
-          </span>
-        </div>
-        <Portfolios
-          portfolios={portfolios}
-          benchmark={benchmark}
-          notes={notes}
-        />
       </div>
 
       <footer className="section-rule mt-12 pt-6">
