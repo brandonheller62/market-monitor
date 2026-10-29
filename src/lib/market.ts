@@ -2,20 +2,28 @@ import { getJson, getText, num } from "./http";
 import { dedash } from "./format";
 import type { Curve, Mover, Quote, QuoteGroup } from "./types";
 
+type NasdaqPrice = {
+  lastSalePrice?: string;
+  netChange?: string;
+  percentageChange?: string;
+  lastTradeTimestamp?: string;
+};
+
 type NasdaqQuote = {
   data: {
     symbol: string;
     companyName?: string;
-    primaryData?: {
-      lastSalePrice?: string;
-      netChange?: string;
-      percentageChange?: string;
-      lastTradeTimestamp?: string;
-    } | null;
+    primaryData?: NasdaqPrice | null;
+    secondaryData?: NasdaqPrice | null;
   } | null;
 };
 
-/** One Nasdaq quote. Shared by the board and the portfolio tabs. */
+/**
+ * One Nasdaq quote, priced at the regular session only. Outside market hours
+ * Nasdaq puts the extended-hours trade in primaryData and the 4pm close in
+ * secondaryData ("Closed at Oct 29, 2026 4:00 PM ET"), so the close wins
+ * whenever it is there. Shared by the board and the portfolio tabs.
+ */
 export async function quoteSymbol(
   symbol: string,
   assetclass: "index" | "etf" | "stocks" = "stocks",
@@ -29,13 +37,15 @@ export async function quoteSymbol(
   const json = await getJson<NasdaqQuote>(
     `https://api.nasdaq.com/api/quote/${symbol}/info?assetclass=${assetclass}`,
   );
-  const p = json?.data?.primaryData;
+  const close = json?.data?.secondaryData;
+  const closed = /^Closed at/i.test(close?.lastTradeTimestamp ?? "") && num(close?.lastSalePrice) != null;
+  const p = closed ? close : json?.data?.primaryData;
   return {
     companyName: json?.data?.companyName ? dedash(json.data.companyName) : null,
     price: num(p?.lastSalePrice),
     change: num(p?.netChange),
     changePct: num(p?.percentageChange),
-    asOf: p?.lastTradeTimestamp ?? null,
+    asOf: p?.lastTradeTimestamp?.replace(/^Closed at\s+/i, "") ?? null,
   };
 }
 
