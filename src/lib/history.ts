@@ -1,5 +1,5 @@
 import { UA, num } from "./http";
-import type { Closes } from "./perf-math";
+import { sinceLookbackDays, type Closes } from "./perf-math";
 
 /**
  * Daily closes for the portfolio charts, fetched for the union of every book's
@@ -10,8 +10,7 @@ import type { Closes } from "./perf-math";
  * bad 200 for as long as a good one.
  */
 
-const LOOKBACK_DAYS = 45;
-/** Fewer rows than this in a 45-day window means the reply was not real data. */
+/** Fewer rows than this in a 45-day-or-longer window means the reply was not real data. */
 const MIN_ROWS = 15;
 const RETRIES = 3;
 const CONCURRENCY = 4;
@@ -76,10 +75,12 @@ type Attempt = { ok: true; closes: Closes } | { ok: false; reason: string };
 async function attempt(symbol: string, now: Date): Promise<Attempt> {
   const to = new Date(now);
   const from = new Date(now);
-  from.setUTCDate(from.getUTCDate() - LOOKBACK_DAYS);
+  // Reaches the close before SINCE_DATE so the book charts can show that window too.
+  const days = sinceLookbackDays(now);
+  from.setUTCDate(from.getUTCDate() - days);
   const url =
     `https://api.nasdaq.com/api/quote/${symbol}/historical?assetclass=${assetclassFor(symbol)}` +
-    `&fromdate=${from.toISOString().slice(0, 10)}&todate=${to.toISOString().slice(0, 10)}&limit=60`;
+    `&fromdate=${from.toISOString().slice(0, 10)}&todate=${to.toISOString().slice(0, 10)}&limit=${Math.max(60, days)}`;
 
   let res: Response;
   try {

@@ -1,4 +1,5 @@
 import { getBaselineClose, quoteSymbol } from "./market";
+import { SINCE_DATE } from "./perf-math";
 import type { Benchmark, Holding, Portfolio, PortfolioId } from "./types";
 
 type Definition = {
@@ -84,13 +85,8 @@ const DEFINITIONS: Definition[] = [
   },
 ];
 
-/**
- * The date the month-to-date block measures from. Moves are taken from the last
- * close before this, which is the standard month-to-date base. Change this one
- * line to re-point the section, or set it to the first of the current month to
- * make it roll.
- */
-export const SINCE_DATE = "2026-09-01";
+/** Defined beside the book math so the browser can read it; re-exported for the server code. */
+export { SINCE_DATE };
 
 /** Hypothetical capital, spread equally because no share counts are available. */
 const START_CAPITAL = 10_000;

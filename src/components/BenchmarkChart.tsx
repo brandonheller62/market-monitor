@@ -6,6 +6,9 @@ import type { PerfPoint } from "@/lib/performance";
 
 const W = 300;
 
+/** One window of the chart, captioned "Since Sep 1" or "1 month". */
+export type ChartView = { caption: string; points: PerfPoint[] };
+
 /** "Oct 5", or "Latest" for the live point after the last close. */
 const when = (p: PerfPoint) => (p.date ? fmtShortDate(p.date) : "Latest");
 
@@ -45,12 +48,14 @@ export function Summary({
 function Plot({
   points,
   label,
+  caption,
   up,
   height,
   draw = false,
 }: {
   points: PerfPoint[];
   label: string;
+  caption: string;
   up: boolean;
   height: number;
   draw?: boolean;
@@ -89,7 +94,7 @@ function Plot({
         onPointerDown={track}
         onPointerLeave={() => setHover(null)}
         role="img"
-        aria-label={`${label} against the S&P 500 over one month`}
+        aria-label={`${label} against the S&P 500, ${caption.toLowerCase()}`}
       >
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={svg} aria-hidden>
           <line
@@ -185,24 +190,27 @@ function Plot({
  * The card's compact chart. Clicking it opens an enlarged view in a modal
  * dialog where the two lines draw in over a second and a half, replaying on every
  * open. The dialog is native, so Esc closes it and focus returns to the chart.
+ * With more than one view, the dialog can switch windows; it reopens on the
+ * card's own.
  */
-export function BenchmarkChart({
-  points,
-  label,
-  up,
-}: {
-  points: PerfPoint[];
-  label: string;
-  up: boolean;
-}) {
+export function BenchmarkChart({ views, label }: { views: ChartView[]; label: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  // Bumped on each open so the zoomed plot remounts and the drawing replays.
+  // Bumped on each open or switch so the zoomed plot remounts and the drawing replays.
   const [opened, setOpened] = useState(0);
-  const end = points.at(-1)!;
+  const [selected, setSelected] = useState(0);
+  const card = views[0];
+  const zoom = views[selected] ?? card;
+  const end = zoom.points.at(-1)!;
 
   function open() {
+    setSelected(0);
     setOpened((n) => n + 1);
     dialog.current?.showModal();
+  }
+
+  function pick(i: number) {
+    setSelected(i);
+    setOpened((n) => n + 1);
   }
 
   return (
@@ -220,13 +228,19 @@ export function BenchmarkChart({
         }}
         className="cursor-zoom-in"
       >
-        <Plot points={points} label={label} up={up} height={112} />
+        <Plot
+          points={card.points}
+          label={label}
+          caption={card.caption}
+          up={card.points.at(-1)!.subject >= 0}
+          height={112}
+        />
       </div>
 
       <dialog
         ref={dialog}
         className="chart-zoom"
-        aria-label={`${label} vs S&P 500, one month`}
+        aria-label={`${label} vs S&P 500`}
         onClose={() => setOpened(0)}
         // A click that lands on the dialog itself, not its panel, is the backdrop.
         onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
@@ -237,9 +251,29 @@ export function BenchmarkChart({
               <span className="text-[var(--paper)]">{label}</span> vs S&amp;P 500
             </h2>
             <span className="flex items-baseline gap-4">
-              <span className="data text-[0.625rem] text-[var(--muted)]">
-                1 month · daily closes
-              </span>
+              {views.length > 1 ? (
+                <span role="group" aria-label="Window" className="flex gap-3">
+                  {views.map((v, i) => (
+                    <button
+                      key={v.caption}
+                      type="button"
+                      aria-pressed={i === selected}
+                      onClick={() => pick(i)}
+                      className={`data cursor-pointer border-b pb-0.5 text-[0.625rem] uppercase tracking-[0.18em] transition-colors ${
+                        i === selected
+                          ? "border-[var(--accent)] text-[var(--paper)]"
+                          : "border-transparent text-[var(--muted)] hover:text-[var(--paper)]"
+                      }`}
+                    >
+                      {v.caption}
+                    </button>
+                  ))}
+                </span>
+              ) : (
+                <span className="data text-[0.625rem] text-[var(--muted)]">
+                  {zoom.caption} · daily closes
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => dialog.current?.close()}
@@ -253,9 +287,10 @@ export function BenchmarkChart({
             {opened > 0 && (
               <Plot
                 key={opened}
-                points={points}
+                points={zoom.points}
                 label={label}
-                up={up}
+                caption={zoom.caption}
+                up={end.subject >= 0}
                 height={300}
                 draw
               />

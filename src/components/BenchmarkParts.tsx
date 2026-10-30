@@ -1,5 +1,4 @@
-import { BenchmarkChart, Summary } from "./BenchmarkChart";
-import type { Performance } from "@/lib/perf-math";
+import { BenchmarkChart, Summary, type ChartView } from "./BenchmarkChart";
 
 export type Heading = "h2" | "h3";
 
@@ -39,26 +38,29 @@ export function BenchmarkSkeleton({ as = "h2" }: { as?: Heading }) {
   );
 }
 
+/** The first view is the card's; the enlarged chart can switch among all of them. */
 export function Body({
-  perf,
+  views,
   label,
   notes = [],
 }: {
-  perf: Performance | null;
+  views: ChartView[];
   label: string;
   notes?: string[];
 }) {
-  if (!perf) {
+  const view = views[0];
+  if (!view) {
     return (
       <p className="data text-[0.8125rem] text-[var(--muted)]">
         Price history is unavailable right now.
       </p>
     );
   }
+  const end = view.points.at(-1)!;
   return (
     <>
-      <BenchmarkChart points={perf.points} label={label} up={perf.subjectPct >= 0} />
-      <Summary label={label} subjectPct={perf.subjectPct} benchPct={perf.benchPct} />
+      <BenchmarkChart views={views} label={label} />
+      <Summary label={label} subjectPct={end.subject} benchPct={end.bench} />
       {notes.map((note) => (
         <p key={note} className="data mt-1 text-[0.6875rem] leading-relaxed text-[var(--muted)]">
           {note}

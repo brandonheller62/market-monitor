@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { BenchmarkSkeleton, Body, Shell } from "./BenchmarkParts";
-import { bookPerformance, type Closes } from "@/lib/perf-math";
+import { bookPerformance, SINCE_DATE, type Closes } from "@/lib/perf-math";
+import { fmtShortDate } from "@/lib/format";
 
 type History = { series: Record<string, Closes>; failed: { symbol: string; reason: string }[] };
 
@@ -57,9 +58,15 @@ export function PortfolioBenchmarkCard({
 
   if (history === undefined) return <BenchmarkSkeleton as="h3" />;
 
-  const { perf, missing } = history
-    ? bookPerformance(symbols, history.series)
-    : { perf: null, missing: symbols };
+  const series = history?.series ?? {};
+  const since = bookPerformance(symbols, series, "since");
+  const month = bookPerformance(symbols, series, "month");
+  // The card's own window decides the note; the toggle only changes the zoom.
+  const { perf, missing } = since.perf ? since : month;
+  const views = [
+    since.perf && { caption: `Since ${fmtShortDate(SINCE_DATE)}`, points: since.perf.points },
+    month.perf && { caption: "1 month", points: month.perf.points },
+  ].filter((v) => v != null);
 
   const notes = ["Equal dollars in each holding at the first close, held."];
   if (perf && missing.length > 0) {
@@ -69,8 +76,10 @@ export function PortfolioBenchmarkCard({
   }
 
   return (
-    <Shell as="h3">
-      <Body perf={perf} label="Book" notes={perf ? notes : []} />
+    <Shell as="h3" caption={views[0] && `${views[0].caption} · daily closes`}>
+      <Body
+        views={views}
+        label="Book" notes={perf ? notes : []} />
     </Shell>
   );
 }

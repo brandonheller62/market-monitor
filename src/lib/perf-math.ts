@@ -27,8 +27,34 @@ export type Performance = {
 export const SESSIONS = 22;
 
 /**
- * A book against SPY over the last 22 sessions every included ticker traded.
- * The window is SPY's last 22 sessions; a holding missing any of those days
+ * The date the "Since" figures measure from. Moves are taken from the last
+ * close before this, which is the standard month-to-date base. Change this one
+ * line to re-point every "Since" figure and chart, or set it to the first of
+ * the current month to make it roll. Lives here, free of server code, so the
+ * browser-side book charts can read it.
+ */
+export const SINCE_DATE = "2026-09-01";
+
+/**
+ * Calendar days of history that reach the close before SINCE_DATE, with a
+ * week's slack for a holiday weekend, and never less than the month needs.
+ */
+export function sinceLookbackDays(now = new Date()): number {
+  const from = new Date(`${SINCE_DATE}T00:00:00Z`);
+  return Math.max(45, Math.ceil((now.getTime() - from.getTime()) / 86_400_000) + 7);
+}
+
+/** The window's dates out of a series: from the close before SINCE_DATE, or the last 22 sessions. */
+export function windowDates(closes: Closes, window: "since" | "month"): string[] {
+  const dates = closes.map((c) => c.date);
+  if (window === "month") return dates.length >= SESSIONS ? dates.slice(-SESSIONS) : [];
+  const base = dates.findLastIndex((d) => d < SINCE_DATE);
+  return base >= 0 ? dates.slice(base) : [];
+}
+
+/**
+ * A book against SPY over a window every included ticker traded: SPY's last
+ * 22 sessions, or SPY's sessions from the close before SINCE_DATE. The window is SPY's; a holding missing any of those days
  * (failed fetch, halt, gap) is dropped and named rather than shrinking the
  * window for the rest, so the result is the intersection of trading days
  * across the tickers that are kept.
@@ -40,13 +66,13 @@ export const SESSIONS = 22;
 export function bookPerformance(
   symbols: string[],
   series: Record<string, Closes>,
+  window: "since" | "month" = "month",
 ): { perf: Performance | null; missing: string[] } {
-  const spy = series.SPY;
-  if (!spy || spy.length < SESSIONS) return { perf: null, missing: symbols };
+  const calendar = series.SPY ? windowDates(series.SPY, window) : [];
+  if (calendar.length < 2) return { perf: null, missing: symbols };
 
-  const calendar = spy.slice(-SESSIONS).map((c) => c.date);
   const byDate = (closes: Closes) => new Map(closes.map((c) => [c.date, c.close]));
-  const spyBy = byDate(spy);
+  const spyBy = byDate(series.SPY);
 
   const lines: number[][] = [];
   const missing: string[] = [];

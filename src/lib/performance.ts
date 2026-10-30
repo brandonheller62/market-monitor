@@ -1,5 +1,11 @@
 import { getRecentCloses, quoteSymbol } from "./market";
-import { SESSIONS, type Closes, type Performance, type PerfPoint } from "./perf-math";
+import {
+  sinceLookbackDays,
+  windowDates,
+  type Closes,
+  type Performance,
+  type PerfPoint,
+} from "./perf-math";
 
 export type { Performance, PerfPoint };
 
@@ -33,9 +39,9 @@ function liveRelative(price: number | null, closes: Closes, calendar: string[]):
   return price / base;
 }
 
-async function spyHistory() {
+async function spyHistory(days: number) {
   const [closes, q] = await Promise.all([
-    getRecentCloses("SPY", 45, "etf"),
+    getRecentCloses("SPY", days, "etf"),
     quoteSymbol("SPY", "etf"),
   ]);
   return { closes, price: q.price };
@@ -64,25 +70,37 @@ function assemble(
   return { points, subjectPct: end.subject, benchPct: end.bench };
 }
 
-/** One stock against SPY over the stock's own last 22 sessions. */
-export async function getStockPerformance(symbol: string): Promise<Performance | null> {
+/**
+ * One stock against SPY from the last close before SINCE_DATE (the base the
+ * page's "Since" move uses) and over the stock's own last 22 sessions.
+ * Either window is null when its history is short or its base close missing.
+ */
+export async function getStockPerformance(
+  symbol: string,
+): Promise<{ since: Performance | null; month: Performance | null }> {
+  const days = sinceLookbackDays();
   const [closes, q, spy] = await Promise.all([
-    getRecentCloses(symbol),
+    getRecentCloses(symbol, days),
     quoteSymbol(symbol),
-    spyHistory(),
+    spyHistory(days),
   ]);
-  if (closes.length < SESSIONS) return null;
 
-  const calendar = closes.slice(-SESSIONS).map((c) => c.date);
-  const subject = relatives(closes, calendar);
-  const bench = relatives(spy.closes, calendar);
-  if (!subject || !bench) return null;
+  function over(calendar: string[]): Performance | null {
+    if (calendar.length < 2) return null;
+    const subject = relatives(closes, calendar);
+    const bench = relatives(spy.closes, calendar);
+    if (!subject || !bench) return null;
+    return assemble(
+      calendar,
+      subject,
+      bench,
+      liveRelative(q.price, closes, calendar),
+      liveRelative(spy.price, spy.closes, calendar),
+    );
+  }
 
-  return assemble(
-    calendar,
-    subject,
-    bench,
-    liveRelative(q.price, closes, calendar),
-    liveRelative(spy.price, spy.closes, calendar),
-  );
+  return {
+    since: over(windowDates(closes, "since")),
+    month: over(windowDates(closes, "month")),
+  };
 }
