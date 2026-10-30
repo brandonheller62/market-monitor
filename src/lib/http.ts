@@ -3,7 +3,7 @@ export const UA =
   "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 /** Seconds the Next data cache holds a response before refetching. */
-export const REVALIDATE = 300;
+export const REVALIDATE = 60;
 
 /**
  * Every upstream here is a public, keyless endpoint that will occasionally

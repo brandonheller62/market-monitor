@@ -62,11 +62,17 @@ export function windowDates(closes: Closes, window: "since" | "month"): string[]
  * Equal-weighted buy-and-hold: the same dollars go into every holding at the
  * first close and are left alone, the method the "Since September 1" card
  * uses. Null only when SPY or every holding is unusable.
+ *
+ * `live` is the latest quote by symbol, SPY included. When any of them has
+ * moved off the last close, a final point is added at those prices, so the
+ * chart ends where the book's "Since" figure does; a ticker without a quote
+ * holds its last close.
  */
 export function bookPerformance(
   symbols: string[],
   series: Record<string, Closes>,
   window: "since" | "month" = "month",
+  live: Record<string, number | null> = {},
 ): { perf: Performance | null; missing: string[] } {
   const calendar = series.SPY ? windowDates(series.SPY, window) : [];
   if (calendar.length < 2) return { perf: null, missing: symbols };
@@ -75,6 +81,7 @@ export function bookPerformance(
   const spyBy = byDate(series.SPY);
 
   const lines: number[][] = [];
+  const liveLines: number[] = [];
   const missing: string[] = [];
   for (const symbol of symbols) {
     const by = series[symbol] ? byDate(series[symbol]) : null;
@@ -84,16 +91,25 @@ export function bookPerformance(
       continue;
     }
     const base = closes[0]!;
-    lines.push(closes.map((c) => c! / base));
+    const line = closes.map((c) => c! / base);
+    lines.push(line);
+    liveLines.push(live[symbol] != null ? live[symbol]! / base : line.at(-1)!);
   }
   if (lines.length === 0) return { perf: null, missing };
 
   const spyBase = spyBy.get(calendar[0])!;
-  const points = calendar.map((date, i) => ({
+  const points: PerfPoint[] = calendar.map((date, i) => ({
     date,
     subject: (lines.reduce((sum, l) => sum + l[i], 0) / lines.length - 1) * 100,
     bench: (spyBy.get(date)! / spyBase - 1) * 100,
   }));
+  const last = points.at(-1)!;
+  const liveSubject = (liveLines.reduce((sum, r) => sum + r, 0) / lines.length - 1) * 100;
+  const liveBench = live.SPY != null ? (live.SPY / spyBase - 1) * 100 : last.bench;
+  const moved = (a: number, z: number) => Math.abs(a - z) > 1e-6;
+  if (moved(liveSubject, last.subject) || moved(liveBench, last.bench)) {
+    points.push({ date: null, subject: liveSubject, bench: liveBench });
+  }
   const end = points.at(-1)!;
   return { perf: { points, subjectPct: end.subject, benchPct: end.bench }, missing };
 }

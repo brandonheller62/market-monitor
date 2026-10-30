@@ -6,7 +6,7 @@ import type { NoteResult } from "@/lib/note";
 import type { PortfolioId } from "@/lib/types";
 import { sessionPhase } from "@/lib/format";
 
-export const revalidate = 300;
+export const revalidate = 60;
 // A regeneration that has to write fresh notes waits on the model.
 export const maxDuration = 120;
 

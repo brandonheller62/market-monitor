@@ -6,7 +6,7 @@ import { PriceChart } from "@/components/PriceChart";
 import { fmtPct, fmtPrice } from "@/lib/format";
 import { CHARTED_ETFS, findChartedEtf, getRecentCloses, quoteSymbol } from "@/lib/market";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 /** Calendar days back for each range tab. */
 const RANGES = [

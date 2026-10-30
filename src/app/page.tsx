@@ -3,10 +3,9 @@ import { Tape } from "@/components/Tape";
 import { NotePanel } from "@/components/NotePanel";
 import { getSnapshot } from "@/lib/snapshot";
 import { getBriefNote, settleNote } from "@/lib/note";
-import { REVALIDATE } from "@/lib/http";
 import { sessionPhase } from "@/lib/format";
 
-export const revalidate = 300;
+export const revalidate = 60;
 // A regeneration that has to write fresh notes waits on the model.
 export const maxDuration = 120;
 
@@ -69,8 +68,8 @@ export default async function Page() {
           Quotes and price history from Nasdaq&rsquo;s API · par yields from the
           US Treasury. The written notes also read Nasdaq&rsquo;s economic and
           earnings calendars and headlines from CNBC, MarketWatch, the FT and
-          the Federal Reserve. Data refreshes every {REVALIDATE / 60} minutes
-          and is delayed at the source. Not investment advice.
+          the Federal Reserve. Data refreshes every minute while the market
+          is open and is delayed at the source. Not investment advice.
         </p>
       </footer>
     </main>

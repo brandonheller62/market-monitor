@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LiveRefresh } from "./LiveRefresh";
 
 const TABS = [
   { href: "/", label: "Markets" },
@@ -43,6 +44,7 @@ export function SiteNav() {
           </Link>
         );
       })}
+      <LiveRefresh />
     </nav>
   );
 }

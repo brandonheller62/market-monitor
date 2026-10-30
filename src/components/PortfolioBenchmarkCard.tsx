@@ -39,9 +39,12 @@ function loadHistory(symbols: string[]): Promise<History | null> {
 export function PortfolioBenchmarkCard({
   symbols,
   union,
+  live,
 }: {
   symbols: string[];
   union: string[];
+  /** Latest quote by symbol, SPY included, from the server-rendered page. */
+  live: Record<string, number | null>;
 }) {
   const [history, setHistory] = useState<History | null | undefined>(undefined);
   const key = union.join(",");
@@ -59,8 +62,8 @@ export function PortfolioBenchmarkCard({
   if (history === undefined) return <BenchmarkSkeleton as="h3" />;
 
   const series = history?.series ?? {};
-  const since = bookPerformance(symbols, series, "since");
-  const month = bookPerformance(symbols, series, "month");
+  const since = bookPerformance(symbols, series, "since", live);
+  const month = bookPerformance(symbols, series, "month", live);
   // The card's own window decides the note; the toggle only changes the zoom.
   const { perf, missing } = since.perf ? since : month;
   const views = [

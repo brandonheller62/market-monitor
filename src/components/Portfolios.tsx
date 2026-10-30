@@ -194,6 +194,10 @@ function Holdings({
       <PortfolioBenchmarkCard
         symbols={portfolio.holdings.map((h) => h.symbol)}
         union={union}
+        live={{
+          ...Object.fromEntries(portfolio.holdings.map((h) => [h.symbol, h.price])),
+          SPY: benchmark.price,
+        }}
       />
 
       <section className="panel px-4 py-3">

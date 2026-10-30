@@ -10,7 +10,7 @@ import { num } from "@/lib/http";
 import { findHolding } from "@/lib/portfolios";
 import { getStock } from "@/lib/stock";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export async function generateMetadata({
   params,
