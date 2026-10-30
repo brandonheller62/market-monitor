@@ -125,6 +125,30 @@ export function sessionPhase(now = new Date()): SessionPhase {
   };
 }
 
+/**
+ * Which US trading window the clock is in, extended hours included: pre-market
+ * 4:00 to 9:30 ET, the session to 4:00, after hours to 8:00. Null overnight and
+ * at weekends. Holidays are not known here.
+ */
+export function tradingWindow(now = new Date()): "Pre-market" | "Open" | "After hours" | null {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const minutes =
+    (Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24) * 60 +
+    Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  if (weekday === "Sat" || weekday === "Sun") return null;
+  if (minutes < 4 * 60 || minutes >= 20 * 60) return null;
+  if (minutes < 9 * 60 + 30) return "Pre-market";
+  if (minutes < 16 * 60) return "Open";
+  return "After hours";
+}
+
 export function fmtMoney(n: number | null): string {
   if (n == null) return "n/a";
   return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;

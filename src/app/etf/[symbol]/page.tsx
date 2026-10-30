@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ExtendedQuote } from "@/components/ExtendedQuote";
 import { notFound } from "next/navigation";
 import { Delta } from "@/components/Delta";
 import { PriceChart } from "@/components/PriceChart";
@@ -65,6 +66,7 @@ export default async function EtfPage({ params, searchParams }: PageProps<"/etf/
           >
             {fmtPct(q.changePct)} today
           </span>
+          <ExtendedQuote extended={q.extended} className="text-base" />
         </div>
       </header>
 

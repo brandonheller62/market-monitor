@@ -1,3 +1,12 @@
+/** The latest pre-market or after-hours trade, its move measured from the regular close. */
+export type Extended = {
+  session: "Pre-market" | "After hours";
+  price: number;
+  change: number | null;
+  changePct: number | null;
+  asOf: string | null;
+};
+
 export type Quote = {
   label: string;
   symbol: string;
@@ -83,6 +92,8 @@ export type Holding = {
   baseline: number | null;
   /** Move from that close to now, in percent. */
   sincePct: number | null;
+  /** Outside the session, the extended-hours trade shown beside the close. */
+  extended: Extended | null;
 };
 
 export type Portfolio = {
@@ -128,6 +139,7 @@ export type StockDetail = {
   price: number | null;
   changePct: number | null;
   asOf: string | null;
+  extended: Extended | null;
   /** Moves over trailing windows, from Nasdaq's daily closes. */
   fiveDayPct: number | null;
   oneMonthPct: number | null;

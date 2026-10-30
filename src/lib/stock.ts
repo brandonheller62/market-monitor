@@ -34,6 +34,7 @@ export async function getStock(symbol: string): Promise<StockDetail | null> {
     price: q.price,
     changePct: q.changePct,
     asOf: q.asOf,
+    extended: q.extended,
     fiveDayPct: pctFrom(at(5), q.price),
     oneMonthPct: pctFrom(at(21), q.price),
     sincePct: pctFrom(base?.close, q.price),

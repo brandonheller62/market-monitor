@@ -1,6 +1,6 @@
 import { getJson, getText, num } from "./http";
 import { dedash } from "./format";
-import type { Curve, Mover, Quote, QuoteGroup } from "./types";
+import type { Curve, Extended, Mover, Quote, QuoteGroup } from "./types";
 
 type NasdaqPrice = {
   lastSalePrice?: string;
@@ -15,6 +15,8 @@ type NasdaqQuote = {
     companyName?: string;
     primaryData?: NasdaqPrice | null;
     secondaryData?: NasdaqPrice | null;
+    /** "Market Open", "Pre-Market", "After-Hours", "Closed". */
+    marketStatus?: string | null;
   } | null;
 };
 
@@ -23,6 +25,10 @@ type NasdaqQuote = {
  * Nasdaq puts the extended-hours trade in primaryData and the 4pm close in
  * secondaryData ("Closed at Oct 29, 2026 4:00 PM ET"), so the close wins
  * whenever it is there. Shared by the board and the portfolio tabs.
+ *
+ * That extended-hours trade comes back separately as `extended`, so a page can
+ * show it beside the close without it touching any move or total. Nasdaq
+ * measures its change from the same close.
  */
 export async function quoteSymbol(
   symbol: string,
@@ -33,19 +39,33 @@ export async function quoteSymbol(
   change: number | null;
   changePct: number | null;
   asOf: string | null;
+  extended: Extended | null;
 }> {
   const json = await getJson<NasdaqQuote>(
     `https://api.nasdaq.com/api/quote/${symbol}/info?assetclass=${assetclass}`,
   );
   const close = json?.data?.secondaryData;
   const closed = /^Closed at/i.test(close?.lastTradeTimestamp ?? "") && num(close?.lastSalePrice) != null;
-  const p = closed ? close : json?.data?.primaryData;
+  const primary = json?.data?.primaryData;
+  const p = closed ? close : primary;
+  const extendedPrice = num(primary?.lastSalePrice);
+  const extended: Extended | null =
+    closed && extendedPrice != null && !/^Closed at/i.test(primary?.lastTradeTimestamp ?? "")
+      ? {
+          session: /pre/i.test(json?.data?.marketStatus ?? "") ? "Pre-market" : "After hours",
+          price: extendedPrice,
+          change: num(primary?.netChange),
+          changePct: num(primary?.percentageChange),
+          asOf: primary?.lastTradeTimestamp ?? null,
+        }
+      : null;
   return {
     companyName: json?.data?.companyName ? dedash(json.data.companyName) : null,
     price: num(p?.lastSalePrice),
     change: num(p?.netChange),
     changePct: num(p?.percentageChange),
     asOf: p?.lastTradeTimestamp?.replace(/^Closed at\s+/i, "") ?? null,
+    extended,
   };
 }
 

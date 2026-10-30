@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Delta } from "./Delta";
 import { NotePanel } from "./NotePanel";
 import { PortfolioBenchmarkCard } from "./PortfolioBenchmarkCard";
+import { ExtendedQuote } from "./ExtendedQuote";
 import { fmtMoney, fmtPct, fmtPrice, fmtShortDate } from "@/lib/format";
 import type { NoteResult } from "@/lib/note";
 import type { Benchmark, Portfolio, PortfolioId } from "@/lib/types";
@@ -235,6 +236,7 @@ function Holdings({
                 <span className="ml-2 text-[0.875rem] text-[var(--muted)]">
                   {h.name}
                 </span>
+                <ExtendedQuote extended={h.extended} className="mt-0.5 block text-[0.6875rem]" />
               </div>
               <div className="flex shrink-0 items-baseline gap-3">
                 <span className="data w-16 text-right text-[0.8125rem] sm:w-20">

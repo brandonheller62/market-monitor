@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ExtendedQuote } from "@/components/ExtendedQuote";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BenchmarkSkeleton, StockBenchmarkCard } from "@/components/BenchmarkCard";
@@ -77,6 +78,7 @@ export default async function StockPage({ params }: PageProps<"/stock/[symbol]">
           >
             {fmtPct(stock.changePct)} today
           </span>
+          <ExtendedQuote extended={stock.extended} className="text-base" />
         </div>
       </header>
 

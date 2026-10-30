@@ -142,6 +142,7 @@ export async function getPortfolio(id: PortfolioId): Promise<Portfolio> {
         price: q.price,
         changePct: q.changePct,
         asOf: q.asOf,
+        extended: q.extended,
         baseline: base?.close ?? null,
         sincePct,
       };
