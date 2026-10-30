@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "Markets" },
   { href: "/portfolios", label: "Portfolios" },
+  { href: "/questions", label: "Closing Questions" },
 ];
 
 /**
@@ -14,6 +15,7 @@ const TABS = [
  */
 function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/" || pathname.startsWith("/etf/");
+  if (href === "/questions") return pathname.startsWith(href);
   return pathname.startsWith(href) || pathname.startsWith("/stock/");
 }
 
