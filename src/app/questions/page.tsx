@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { QuestionDeck } from "@/components/QuestionDeck";
 
 export const metadata: Metadata = { title: "Closing Questions · Market Monitor" };
 
@@ -20,21 +21,9 @@ export default function QuestionsPage() {
         </h1>
       </header>
 
-      <ol className="section-rule mt-10">
-        {QUESTIONS.map((q, i) => (
-          <li
-            key={q}
-            className="flex gap-6 border-b border-[var(--line)] py-8 sm:gap-10"
-          >
-            <span className="data pt-2 text-sm text-[var(--accent)]">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <p className="display max-w-[36ch] text-[clamp(1.375rem,3vw,2.25rem)] leading-snug text-[var(--paper)]">
-              {q}
-            </p>
-          </li>
-        ))}
-      </ol>
+      <div className="section-rule mt-10 pt-8">
+        <QuestionDeck questions={QUESTIONS} />
+      </div>
     </main>
   );
 }
